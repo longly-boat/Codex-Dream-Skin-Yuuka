@@ -27,6 +27,8 @@ runtime/*
 !runtime/retired-theme-migration.mjs
 !runtime/retired-theme-catalog.json
 !runtime/validate-safe-css-file.mjs
+!runtime/yuuka-art.mjs
+!runtime/yuuka-skin.css
 
 # local agent context
 TASK_PROGRESS.md
@@ -39,3 +41,23 @@ docs/unified-skin-runtime-plan.md
 windows/theme-manager/**/bin/
 windows/theme-manager/**/obj/
 windows/assets/theme-manager/
+windows/scripts/auto-launch-hidden.exe
+
+# Local design iterations, personal pet state and one-off machine repairs.
+/dist/
+/artwork/
+/pet-update/
+/preview-assets/
+/preview.html
+/art-prompt.txt
+/apply-yuuka-v3.ps1
+/inspect-main-process.ps1
+/install-enable-yuuka.ps1
+/install-yuuka-launcher.ps1
+/launch-yuuka.ps1
+/measure-port-query.ps1
+/profile-startup-queries.ps1
+/repair-auto-takeover.ps1
+/repair-yuuka-live.ps1
+/test-auto-takeover.ps1
+/update-yuuka-shortcut-icon.ps1

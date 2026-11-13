@@ -6,9 +6,17 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$startupScriptNames = @('auto-launch-dream-skin.ps1', 'tray-dream-skin.ps1')
 
 function Assert-DreamSkinPatchSource {
   param([Parameter(Mandatory = $true)][string]$Root)
+
+  foreach ($scriptName in $startupScriptNames) {
+    $startupPath = Join-Path $Root "scripts\$scriptName"
+    if (-not (Test-Path -LiteralPath $startupPath -PathType Leaf)) {
+      throw "Patch source is incomplete: $startupPath"
+    }
+  }
 
   $commonPath = Join-Path $Root 'scripts\common-windows.ps1'
   $startPath = Join-Path $Root 'scripts\start-dream-skin.ps1'
@@ -19,7 +27,7 @@ function Assert-DreamSkinPatchSource {
   $cssPath = Join-Path $Root 'assets\dream-skin.css'
   $acrylicCssPath = Join-Path $Root 'assets\internet-angel-acrylic.css'
   $extensionCssPath = Join-Path $Root 'assets\internet-angel-extension.css'
-  foreach ($assetName in @('theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json')) {
+  foreach ($assetName in @('theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json')) {
     $motionPath = Join-Path $Root "assets\$assetName"
     if (-not (Test-Path -LiteralPath $motionPath -PathType Leaf)) {
       throw "Patch source is incomplete: $motionPath"
@@ -177,7 +185,7 @@ $predicateRuntimeSourcePath = Join-Path $sourceRoot 'assets\css-predicate-cache.
 $stateRoot = if ($StateRoot) {
   [System.IO.Path]::GetFullPath($StateRoot)
 } else {
-  Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+  Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
 }
 $engine = Get-DreamSkinRuntimeEnginePaths -StateRoot $stateRoot
 if (-not (Test-Path -LiteralPath $engine.Root -PathType Container)) {
@@ -213,7 +221,7 @@ $patchIdentityPairs = @(
   @{ Source = $extensionScriptSourcePath; Installed = $installedExtensionScript },
   @{ Source = $predicateRuntimeSourcePath; Installed = $installedPredicateRuntime }
 )
-$motionAssetNames = @('theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json')
+$motionAssetNames = @('theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json')
 foreach ($assetName in $motionAssetNames) {
   $patchIdentityPairs += @{
     Source = (Join-Path $sourceRoot "assets\$assetName")
@@ -221,6 +229,12 @@ foreach ($assetName in $motionAssetNames) {
   }
 }
 $alreadyPatched = $true
+foreach ($scriptName in $startupScriptNames) {
+  $patchIdentityPairs += @{
+    Source = (Join-Path $sourceRoot "scripts\$scriptName")
+    Installed = (Join-Path $engine.Scripts $scriptName)
+  }
+}
 foreach ($pair in $patchIdentityPairs) {
   if (-not (Test-DreamSkinPatchFileMatches -Source $pair.Source -Installed $pair.Installed)) {
     $alreadyPatched = $false
@@ -228,7 +242,7 @@ foreach ($pair in $patchIdentityPairs) {
   }
 }
 if ($alreadyPatched) {
-  Write-Host "The installed Dream Skin runtime at $($engine.Root) already contains the Codex 26.814 fixes."
+  Write-Host "The installed Dream Skin runtime at $($engine.Root) matches the selected patch files."
   return
 }
 if ($DryRun) {
@@ -308,6 +322,16 @@ try {
         Installed = (Join-Path $engine.Root $relative)
       }
     }
+    foreach ($scriptName in $startupScriptNames) {
+      $relative = "scripts\$scriptName"
+      $startupSource = Join-Path $sourceRoot $relative
+      $startupStaged = Join-Path $stagingRoot $relative
+      Copy-Item -LiteralPath $startupSource -Destination $startupStaged -Force -ErrorAction Stop
+      $patchPairs += @{
+        Relative = $relative; Source = $startupSource; Staged = $startupStaged
+        Installed = (Join-Path $engine.Root $relative)
+      }
+    }
     foreach ($pair in $patchPairs) {
       $sourceHash = (Get-FileHash -LiteralPath $pair.Source -Algorithm SHA256).Hash
       $stagedHash = (Get-FileHash -LiteralPath $pair.Staged -Algorithm SHA256).Hash
@@ -319,7 +343,7 @@ try {
     # their staged bytes have been authenticated against the selected source.
     # injector.mjs is data/code consumed by the bundled runtime and is never
     # unblocked here.
-    foreach ($stagedScript in @($stagedCommon, $stagedStart, $stagedTheme, $stagedPatch)) {
+    foreach ($stagedScript in @($patchPairs | Where-Object { $_.Relative -like 'scripts\*.ps1' } | ForEach-Object { $_.Staged })) {
       Unblock-File -LiteralPath $stagedScript -ErrorAction Stop
     }
 

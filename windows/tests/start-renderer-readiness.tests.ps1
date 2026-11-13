@@ -86,6 +86,8 @@ function Exit-DreamSkinOperationLock {
   if ($Mutex -eq 'mock-lock') { $script:lockExited = $true }
 }
 function Assert-DreamSkinPort { param([int]$Port) }
+# No legacy engine in this lifecycle fixture; yuuka-product covers the guard.
+function Assert-YuukaLegacyEngineInactive {}
 function Get-DreamSkinNodeRuntime {
   return [pscustomobject]@{ Path = 'mock-node.exe'; Version = '22.23.1' }
 }
@@ -263,7 +265,7 @@ try {
 }
 
 $announcedActive = @($script:hostMessages | Where-Object {
-  $_ -like 'Codex Dream Skin is active*'
+  $_ -like 'Codex Dream Skin Yuuka is active*'
 }).Count -gt 0
 if (-not $failed -or $script:verifyCalls -ne 1 -or $script:onceCalls -ne 1 -or
   -not $script:verifyAllowedHidden -or
@@ -321,7 +323,7 @@ try {
 }
 
 $announcedActive = @($script:hostMessages | Where-Object {
-  $_ -like 'Codex Dream Skin is active*'
+  $_ -like 'Codex Dream Skin Yuuka is active*'
 }).Count -gt 0
 if ($null -ne $successFailureMessage -or $script:verifyCalls -ne 3 -or
   -not $script:verifyAllowedHidden -or $script:removeCalls -ne 0 -or

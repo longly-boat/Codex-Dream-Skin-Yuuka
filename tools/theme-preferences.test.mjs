@@ -15,7 +15,7 @@ const options = { preferencesPath, warn: (message) => warnings.push(message) };
 const write = (themes) => fs.writeFile(preferencesPath, JSON.stringify({ schemaVersion: 1, themes }));
 try {
   assert.equal(themePreferencesPath("darwin", {}, "/test"), path.join("/test", "Library", "Application Support", "CodexDreamSkinStudio", "theme-preferences.json"));
-  assert.equal(themePreferencesPath("win32", { LOCALAPPDATA: "/local" }, "/test"), path.join("/local", "CodexDreamSkin", "theme-preferences.json"));
+  assert.equal(themePreferencesPath("win32", { LOCALAPPDATA: "/local" }, "/test"), path.join("/local", "CodexDreamSkinYuuka", "theme-preferences.json"));
   assert.equal(themePreferencesPath("linux", {}, "/test"), path.join("/test", ".local", "state", "CodexDreamSkin", "theme-preferences.json"));
   assert.equal(themePreferencesPath("linux", { XDG_STATE_HOME: "/state" }, "/test"), path.join("/state", "CodexDreamSkin", "theme-preferences.json"));
   assert.equal(await readThemeTransparency("test", options), undefined);

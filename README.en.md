@@ -1,54 +1,46 @@
-# Codex Dream Skin · INTERNET ANGEL
+# Codex Dream Skin · Yuuka
 
-[中文](./README.md) · [English](./README.en.md)
+[中文](README.md) · [Usage and migration (Chinese)](YUUKA-README.md)
 
-An INTERNET ANGEL theme for Codex Desktop on Windows, macOS, and Linux.
+A Yuuka / Blue Archive fan theme for Windows Codex Desktop, based on [the Internet Angel fork](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose).
 
-<p align="center">
-  <img src="windows/assets/dream-reference.jpg" alt="INTERNET ANGEL theme background" width="900">
-</p>
+**v1.9.2 · First Yuuka release** · [Downloads and checksums](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.2) · [Release notes](docs/releases/v1.9.2-en.md) · [Report an issue](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues)
 
-Current version **1.9.1** · [Release notes](./docs/releases/v1.9.1-en.md) · [Download](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/releases/latest)
+> This is a **pure vibe coding project**: the Yuuka customization and fixes were implemented mainly with AI assistance, and some rough edges may remain. Sorry if you run into a bug. Please share reproduction steps and your Codex and theme versions in [Issues](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues) so we can improve it.
+
+## Special thanks to the Internet Angel project
+
+**Our special thanks go to the maintainers and contributors of [EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose). Yuuka is a derivative of their openly shared code and design work.**
+
+Their theme injection engine, package and Safe CSS validation, Windows installer and automatic takeover mechanism, motion framework, tray and native theme manager provide the foundation. Their home cards and themed interface also informed this version. Our additions focus on Yuuka artwork, Blue Archive visuals, the home workspace, compatibility fixes, and an independent installation and update identity.
+
+We also thank the earlier [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin) project and its contributors. Original copyright notices and licenses are retained. See [credits and sources](CREDITS.md).
+
+![Yuuka wallpaper](yuuka/background.png)
 
 ## Features
 
-- Themes the home screen, sidebar, conversations, composer, settings, and terminal.
-- Adds task feedback, a pixel character, stars, and blinking animation for the bundled wallpaper character.
-- macOS and Windows support custom backgrounds, theme ZIP imports, saved themes, switching, and background transparency.
-- Provides motion and restore controls through the macOS menu bar, Windows tray, or Linux commands.
+- A light Yuuka default and a dark Night Accounting preset.
+- Blinking, subtle hair movement and an animated Millennium emblem on Home; plain-color conversation pages.
+- Four themed task cards: Schale Investigation, Millennium Workshop, Yuuka Accounting and Emergency Support.
+- Native projects as Workspace, Yuuka messages, and a local daily checklist with add, complete and delete controls. Plans survive app restarts.
+- Tray controls, native theme management, ZIP imports, transparency and motion settings, and automatic takeover of the original Codex launch entry.
+- Separate installation, data and update identities. The upstream `dreamskin://` protocol remains untouched.
 
-## Install
+## Installation
 
-Install and launch Codex Desktop once, then follow your platform guide.
+Requires Windows 10 or later, x64, and the Microsoft Store version of Codex installed and successfully launched at least once. The installer bundles Node.js; normal use does not require a separate Node.js installation or .NET SDK.
 
-| Platform | Download and requirements | Guide |
-| --- | --- | --- |
-| Windows | `CodexDreamSkin-Setup-vX.Y.Z.exe`; Microsoft Store Codex; bundled Node.js | [Install and update](./docs/install-windows.en.md) |
-| macOS | `CodexDreamSkin-vX.Y.Z.dmg`; uses Node.js from Codex | [Install and update](./docs/install-macos.en.md) |
-| Linux | Node.js 20+; primarily supports AUR `openai-codex-desktop` | [Install and commands](./linux/README.md#english) |
+1. Get `CodexDreamSkinYuuka-Setup-v1.9.2.exe` and `SHA256SUMS.txt` from [the v1.9.2 Release](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.2). Verify the checksum before running Setup.
+2. Open **Codex Dream Skin Yuuka**, apply the theme and optionally enable automatic takeover. You can keep using the original Codex taskbar icon; takeover still restarts Codex once.
+3. When migrating an earlier custom installation, disable its watcher and restore the original appearance first. See the [English release and migration notes](docs/releases/v1.9.2-en.md) or the [full Chinese usage and source-build guide](YUUKA-README.md).
 
-Download Windows and macOS packages from the [latest release](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/releases/latest) and verify them against `SHA256SUMS.txt` before running. Source installation: [Windows](./windows/README.en.md) · [macOS](./macos/README.en.md) · [Linux](./linux/README.md#english).
+The v1.9.2 installer is **not code-signed**. Windows may display an unknown-publisher or SmartScreen prompt; runtime validation does not provide a publisher signature. Check the repository Release source and checksum. Do not update Yuuka with the upstream installer.
 
-## Use
+This release channel ships Windows only. The inherited macOS/Linux sources and shared assets remain in the repository, but their default themes, product identities and updaters are not supported Yuuka distributions.
 
-- **Themes**: use the macOS **Theme** menu or the Windows tray to switch and import themes. Open the Codex Dream Skin window on Windows to adjust transparency and delete saved themes. See [theme management](./docs/theme-management.en.md).
-- **Motion**: choose System, Off, Subtle, or Full. Full mode enables home-screen characters and ambient effects; system reduced-motion settings take priority. See [motion settings](./docs/theme-motion.en.md).
-- **Update and restore**: quit Codex and the theme tool before installing an update. Use the restore control described in your platform guide to return to the original appearance.
+## Sources and license
 
-## Documentation
+Code retains the upstream [MIT license and copyright notice](LICENSE). Artwork is AI-generated fan art; character and game marks belong to their respective owners and are not licensed by the code license. This is not an official OpenAI, NEXON or NEXON Games product.
 
-| Topic | 中文 | English |
-| --- | --- | --- |
-| Project overview | [阅读](./docs/PROJECT.md) | [Read](./docs/PROJECT.en.md) |
-| Platforms and development | [阅读](./docs/platforms.md) | [Read](./docs/platforms.en.md) |
-| Theme management and format | [阅读](./docs/theme-management.md) | [Read](./docs/theme-management.en.md) |
-| Motion settings | [阅读](./docs/theme-motion.md) | [Read](./docs/theme-motion.en.md) |
-| Background creation | [阅读](./docs/reference-background-prompt-guide.md) | [Read](./docs/reference-background-prompt-guide.en.md) |
-
-See [SECURITY.md](./SECURITY.md) for runtime and security information.
-
-## Origin and license
-
-A community-maintained fork of [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin). Thanks to early theme contributor [@seansong-ideogram](https://github.com/seansong-ideogram).
-
-Code is [MIT licensed](./LICENSE). Codex, theme assets, and trademarks belong to their respective rights holders; see the [asset notice](./macos/NOTICE.md).
+Account-specific desktop pets are not included in the installer. The daily checklist is local data, not a cloud task list or a Codex goal.

@@ -39,11 +39,14 @@
   const id = (value) => typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(value);
   const metadata = (value) => exactKeys(value, ["width", "height"])
     && [value.width, value.height].every((size) => Number.isSafeInteger(size) && size > 0 && size <= 16384);
-  const validConfig = (value) => exactKeys(value, ["settings", "themeId", "themeRevision", "platform"], ["artKey", "artMetadata"])
+  const validConfig = (value) => exactKeys(value, ["settings", "themeId", "themeRevision", "platform"], ["artKey", "artMetadata", "yuukaMotionArt"])
     && id(value.themeId) && id(value.themeRevision)
     && ["macos", "windows", "linux"].includes(value.platform)
     && (value.artKey === undefined || id(value.artKey))
     && (value.artMetadata === undefined || metadata(value.artMetadata))
+    && (value.yuukaMotionArt === undefined || (Array.isArray(value.yuukaMotionArt) && value.yuukaMotionArt.length === 1
+      && value.yuukaMotionArt.every((art) => typeof art === "string" && art.length <= 3_000_000
+        && /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/.test(art))))
     && exactKeys(value.settings, ["schemaVersion", "mode", "effects"])
     && value.settings.schemaVersion === 1
     && ["system", "off", "subtle", "full"].includes(value.settings.mode)
@@ -79,6 +82,9 @@
   let characterNode = null;
   let backgroundCharacterNode = null;
   let backgroundSceneNode = null;
+  let placementTimer = null;
+  let yuukaPlacementValid = false;
+  let yuukaPlacementKey = "";
   let ambientNode = null;
   let snapshot = null;
   let generation = 0;
@@ -300,6 +306,47 @@
   // Replacing its image must never paint a face onto unrelated artwork.
   const hasCharacterArtwork = () => config.artKey === "4858200d0c5714091d3d"
     && config.artMetadata?.width === 2560 && config.artMetadata?.height === 1440;
+  const hasYuukaArtwork = () => ["yuuka-seminar", "yuuka-seminar-night"].includes(config.themeId)
+    && config.artKey === "8d4c2008c9f7e7a5d74c"
+    && config.artMetadata?.width === 1672 && config.artMetadata?.height === 941
+    && Array.isArray(config.yuukaMotionArt);
+  // These coordinates belong to the registered artwork, never to an imported
+  // theme's arbitrary code. Soft masks keep the edited eye frame and moving
+  // interior hair strands local; the face, body and background remain still.
+  const yuukaRegions = [[1266, 260, 60, 48], [1330, 226, 72, 54],
+    [1148, 174, 104, 198], [1490, 158, 140, 212]];
+  const yuukaWallpaperCharacter = () => {
+    const element = (tag, attributes = {}, parent) => {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value));
+      parent?.appendChild(node);
+      return node;
+    };
+    const svg = element("svg", { viewBox: "0 0 1672 941", preserveAspectRatio: "none",
+      "aria-hidden": "true", focusable: "false", "data-dream-motion-yuuka": "" });
+    const defs = element("defs", {}, svg);
+    // One generated difference frame and the existing wallpaper are shared by
+    // all four masked uses. No raster crops or per-frame canvas/DOM work.
+    element("image", { id: "dream-yuuka-closed", x: 0, y: 0, width: 1672, height: 941,
+      preserveAspectRatio: "none", href: config.yuukaMotionArt[0] }, defs);
+    element("image", { id: "dream-yuuka-open", x: 0, y: 0, width: 1672, height: 941,
+      preserveAspectRatio: "none", href: artSource() }, defs);
+    for (const [index, [x, y, width, height]] of yuukaRegions.entries()) {
+      const gradientId = `dream-yuuka-feather-${index}`;
+      const maskId = `dream-yuuka-mask-${index}`;
+      const gradient = element("radialGradient", { id: gradientId }, defs);
+      element("stop", { offset: index < 2 ? "76%" : "64%", "stop-color": "white" }, gradient);
+      element("stop", { offset: "100%", "stop-color": "black" }, gradient);
+      const mask = element("mask", { id: maskId, maskUnits: "userSpaceOnUse", x, y, width, height }, defs);
+      element("ellipse", { cx: x + width / 2, cy: y + height / 2, rx: width / 2,
+        ry: height / 2, fill: `url(#${gradientId})` }, mask);
+      const group = element("g", { mask: `url(#${maskId})`, "data-dream-motion-yuuka-region": String(index) }, svg);
+      element("use", { href: index < 2 ? "#dream-yuuka-closed" : "#dream-yuuka-open",
+        [index < 2 ? "data-dream-motion-yuuka-blink" : "data-dream-motion-yuuka-hair"]: String(index),
+      }, group);
+    }
+    return svg;
+  };
   const wallpaperCharacter = () => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 220 104");
@@ -329,13 +376,29 @@
     return svg;
   };
   const hideDecorations = () => {
+    yuukaPlacementValid = false;
     for (const node of [statusNode, characterNode, ambientNode, backgroundCharacterNode, backgroundSceneNode]) node?.style.setProperty("visibility", "hidden");
     if (backgroundCharacterNode) attr(backgroundCharacterNode, `${PREFIX}art-visible`, "false");
     root.removeAttribute(`${PREFIX}wallpaper`);
   };
+  const invalidateYuukaPlacement = () => {
+    if (!hasYuukaArtwork() || !backgroundCharacterNode) return;
+    // Never leave stale artwork over newly mounted native content. Keep it
+    // hidden throughout a resize/mutation burst, then do one bounded hit test.
+    hideDecorations();
+    if (placementTimer !== null) cancelTimer(placementTimer);
+    placementTimer = later(() => {
+      placementTimer = null;
+      if (active()) placeDecorations();
+    }, 120);
+  };
   const placeDecorations = () => {
+    const yuuka = hasYuukaArtwork();
+    const placementKey = `${mode}:${route}:${paused}:${innerWidth}:${innerHeight}:${Boolean(backgroundCharacterNode)}`;
+    if (yuuka && (placementTimer !== null || (yuukaPlacementValid && yuukaPlacementKey === placementKey))) return;
     hideDecorations();
     if (paused || scrolling || mode === "off" || !document.elementFromPoint) return;
+    if (yuuka) { yuukaPlacementValid = true; yuukaPlacementKey = placementKey; }
     if ([...tracked].some(([node, item]) => item.visible && matches(node, '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
       && node.getAttribute("data-state") !== "closed")) return;
     let samples = 0;
@@ -395,21 +458,37 @@
         && focusX !== null && focusY !== null) {
         const viewportWidth = root.clientWidth || innerWidth;
         const viewportHeight = root.clientHeight || innerHeight;
-        const scale = Math.max(viewportWidth / 2560, viewportHeight / 1440);
-        const width = 2560 * scale, height = 1440 * scale;
-        const x = (viewportWidth - width) * focusX + width * .582;
-        const y = (viewportHeight - height) * focusY + height * .351;
-        const w = width * .132, h = height * .107;
-        // Keep the same 6px collision grid as other decorations. At extremely
-        // large sizes an exhausted budget hides the eyes instead of leaving
-        // gaps wide enough to miss a small native control.
-        const eyes = [[17, 27, 58, 56], [125, 31, 78, 56]].map(([ex, ey, ew, eh]) => ({
-          x: x + ex / 220 * w, y: y + ey / 104 * h, width: ew / 220 * w, height: eh / 104 * h,
+        const yuuka = hasYuukaArtwork();
+        const artWidth = yuuka ? 1672 : 2560, artHeight = yuuka ? 941 : 1440;
+        const scale = Math.max(viewportWidth / artWidth, viewportHeight / artHeight);
+        const width = artWidth * scale, height = artHeight * scale;
+        const x = (viewportWidth - width) * focusX + (yuuka ? 0 : width * .582);
+        const y = (viewportHeight - height) * focusY + (yuuka ? 0 : height * .351);
+        const w = yuuka ? width : width * .132, h = yuuka ? height : height * .107;
+        // Foreground pixel eyelids retain dense collision checks. Yuuka now
+        // paints below the native main scrim and controls: independently clip
+        // its four patches to the viewport rather than rejecting the whole
+        // face when one hair strand is cropped or under a transparent panel.
+        const eyes = (yuuka ? yuukaRegions : [[17, 27, 58, 56], [125, 31, 78, 56]]).map(([ex, ey, ew, eh]) => ({
+          x: x + ex / (yuuka ? 1672 : 220) * w, y: y + ey / (yuuka ? 941 : 104) * h,
+          width: ew / (yuuka ? 1672 : 220) * w, height: eh / (yuuka ? 941 : 104) * h,
         }));
         const reserved = (statusNode || characterNode ? 182 : 0) + (ambientNode ? 247 : 0);
         const eyeBudget = 1600 - reserved;
         const eyeSamples = eyes.reduce((sum, eye) => sum + (Math.floor(eye.width / 6) + 1) * (Math.floor(eye.height / 6) + 1), 0);
-        if (eyeSamples <= eyeBudget && eyes.every((eye) => free(eye.x, eye.y, eye.width, eye.height, eyeBudget))) {
+        let artClear;
+        if (yuuka) {
+          const intersects = eyes.map((eye) => eye.x < viewportWidth && eye.y < viewportHeight
+            && eye.x + eye.width > 0 && eye.y + eye.height > 0);
+          for (const [index, show] of intersects.entries()) {
+            const group = query(backgroundCharacterNode, `[data-dream-motion-yuuka-region="${index}"]`);
+            if (group) attr(group, "data-dream-motion-region-visible", String(show));
+          }
+          artClear = intersects.some(Boolean);
+        } else {
+          artClear = eyeSamples <= eyeBudget && eyes.every((eye) => free(eye.x, eye.y, eye.width, eye.height, eyeBudget));
+        }
+        if (artClear) {
           for (const [name, value] of [["left", x], ["top", y], ["width", w], ["height", h]]) {
             backgroundCharacterNode.style.setProperty(name, `${value.toFixed(2)}px`);
           }
@@ -427,7 +506,7 @@
           }
           backgroundCharacterNode.style.setProperty("visibility", "visible");
           attr(backgroundCharacterNode, `${PREFIX}art-visible`, "true");
-          occupied.push(...eyes);
+          if (!yuuka) occupied.push(...eyes);
         }
       }
     }
@@ -468,6 +547,7 @@
   };
   const reconcileOwned = () => {
     if (mode === "off") {
+      root.removeAttribute(`${PREFIX}art-profile`);
       statusNode = removeOwned(statusNode);
       characterNode = removeOwned(characterNode);
       backgroundCharacterNode = removeOwned(backgroundCharacterNode);
@@ -482,12 +562,15 @@
       if (!characterNode) { characterNode = makeOwned("character"); characterNode.appendChild(pixelCharacter()); }
     }
     else characterNode = removeOwned(characterNode);
-    if (builtin && hasCharacterArtwork() && config.settings.effects.character && mode === "full" && route === "home") {
+    if (((builtin && hasCharacterArtwork()) || hasYuukaArtwork()) && config.settings.effects.character && mode === "full" && route === "home") {
+      if (hasYuukaArtwork()) attr(root, `${PREFIX}art-profile`, "yuuka");
+      else root.removeAttribute(`${PREFIX}art-profile`);
       if (!backgroundCharacterNode) {
         backgroundCharacterNode = makeOwned("background-character");
-        backgroundCharacterNode.appendChild(wallpaperCharacter());
+        backgroundCharacterNode.appendChild(hasYuukaArtwork() ? yuukaWallpaperCharacter() : wallpaperCharacter());
       }
     } else {
+      root.removeAttribute(`${PREFIX}art-profile`);
       backgroundCharacterNode = removeOwned(backgroundCharacterNode);
       backgroundSceneNode = removeOwned(backgroundSceneNode);
     }
@@ -626,6 +709,14 @@
     frame = window.requestAnimationFrame(() => { frame = null; refresh(); });
   };
   const resetRoute = (wait = true) => {
+    // Revoke home paint before navigation's paused early return. A task page
+    // must never retain the previous home's wallpaper or animation layers.
+    route = "other";
+    attr(root, `${PREFIX}route`, route);
+    backgroundCharacterNode = removeOwned(backgroundCharacterNode);
+    backgroundSceneNode = removeOwned(backgroundSceneNode);
+    ambientNode = removeOwned(ambientNode);
+    invalidateYuukaPlacement();
     routeEpoch += 1;
     currentRouteKey = routeKey();
     navigating = wait;
@@ -644,11 +735,13 @@
       const item = tracked.get(entry.target);
       if (item) item.visible = entry.isIntersecting;
     }
+    invalidateYuukaPlacement();
     schedule();
   }) : null;
   const observer = typeof MutationObserver === "function" ? new MutationObserver((records) => {
     if (!active()) return;
     let changed = false;
+    let geometryChanged = false;
     if (root.getAttribute("data-dream-skin") !== "active") { cleanup(); return; }
     if (composition) {
       compositionDirty ||= records.some((mutation) => !mutation.target?.closest?.(`[${OWNED}]`));
@@ -658,7 +751,10 @@
       if (mutation.target === root) { changed = true; continue; }
       if (mutation.target?.closest?.(`[${OWNED}]`)) continue;
       if (mutation.type === "attributes" && ["class", "style"].includes(mutation.attributeName)) {
-        if (backgroundCharacterNode) changed = true;
+        if (backgroundCharacterNode) {
+          if (hasYuukaArtwork()) geometryChanged ||= mutation.target === document.body;
+          else changed = true;
+        }
         if (tracked.has(mutation.target) && matches(mutation.target, SELECTORS.menu)) {
           trackNode(mutation.target); changed = true;
         }
@@ -669,7 +765,10 @@
       // per frame while the wallpaper layer exists; do not widen DOM scans.
       if (backgroundCharacterNode && (mutation.type === "attributes"
         || [...(mutation.addedNodes || []), ...(mutation.removedNodes || [])]
-          .some((node) => node.nodeType === 3 || (node.nodeType === 1 && !node.hasAttribute(OWNED))))) changed = true;
+          .some((node) => node.nodeType === 3 || (node.nodeType === 1 && !node.hasAttribute(OWNED))))) {
+        if (hasYuukaArtwork()) geometryChanged ||= mutation.target === document.body;
+        else changed = true;
+      }
       if (mutation.type === "attributes") {
         if (["data-content-search-unit-key", "data-local-conversation-item-target-ids"].includes(mutation.attributeName)
           && [...tracked.keys()].some((node) => matches(node, SELECTORS.edited) && mutation.target.contains(node))) changed = true;
@@ -687,8 +786,9 @@
         }
       }
     }
+    if (changed || geometryChanged) invalidateYuukaPlacement();
     if (changed) schedule();
-    else metrics.ignoredMutations += records.length;
+    else if (!geometryChanged) metrics.ignoredMutations += records.length;
   }) : null;
   const listen = (target, type, callback, capture = false) => {
     if (!target?.addEventListener) return;
@@ -1012,7 +1112,7 @@
     owned.clear();
     for (const node of tracked.keys()) { node.removeAttribute(`${PREFIX}index`); clearBinding(node); }
     tracked.clear();
-    for (const name of ["data-dream-motion", ...["paused", "state", "route", "interactions", "status", "character", "ambient", "theme-transition", "wallpaper"].map((name) => PREFIX + name)]) root.removeAttribute(name);
+    for (const name of ["data-dream-motion", ...["paused", "state", "route", "interactions", "status", "character", "ambient", "theme-transition", "wallpaper", "art-profile"].map((name) => PREFIX + name)]) root.removeAttribute(name);
     if (globalThis[KEY] === state) delete globalThis[KEY];
   }
   state = {
@@ -1043,7 +1143,7 @@
   listen(transparencyMedia, "change", refresh);
   listen(forcedColorsMedia, "change", refresh);
   listen(document, "visibilitychange", refresh);
-  listen(window, "resize", schedule);
+  listen(window, "resize", () => { invalidateYuukaPlacement(); schedule(); });
   listen(window, "message", nativeMessage);
   listen(document, "scroll", () => {
     scrolling = true; paused = true; attr(root, `${PREFIX}paused`, "true"); hideDecorations();

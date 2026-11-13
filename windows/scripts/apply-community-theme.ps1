@@ -14,7 +14,7 @@ if (-not $FunctionsOnly) {
   . (Join-Path $PSScriptRoot 'theme-windows.ps1')
   . (Join-Path $PSScriptRoot 'localization-windows.ps1')
   $dreamSkinLanguage = Resolve-DreamSkinLanguage `
-    -StateRoot (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    -StateRoot (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
 }
 
 function Get-DreamSkinCommunityText {
@@ -35,7 +35,7 @@ function Show-DreamSkinCommunityMessage {
   }
   [void][System.Windows.Forms.MessageBox]::Show(
     $Message,
-    'Codex Dream Skin',
+    'Codex Dream Skin Yuuka',
     [System.Windows.Forms.MessageBoxButtons]::OK,
     $icon
   )
@@ -375,7 +375,7 @@ function Invoke-DreamSkinCommunityStartAndVerify {
   if (-not (Test-Path -LiteralPath $startScript -PathType Leaf)) {
     throw 'The managed Dream Skin start script is missing.'
   }
-  $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+  $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
   $resultToken = [guid]::NewGuid().ToString('N')
   $resultPath = Get-DreamSkinStartResultPath -StateRoot $stateRoot -Token $resultToken
   if (Test-Path -LiteralPath $resultPath) {
@@ -862,11 +862,11 @@ function Invoke-DreamSkinCommunityApply {
   $versionId = Resolve-DreamSkinCommunityApplyUri -Uri $ApplyUri
   $endpoints = Get-DreamSkinCommunityThemeEndpoints -VersionId $versionId
   $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-  $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkin.$sid.CommunityApply")
+  $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkinYuuka.$sid.CommunityApply")
   $acquired = $false
   $workRoot = $null
   $retainWorkRoot = $false
-  $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+  $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
   try {
     try { $acquired = $mutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] {
       $acquired = $true

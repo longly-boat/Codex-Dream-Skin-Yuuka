@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.2 · 2026-11-13
+
+- 本版本为 Windows 优香主题首发；macOS 源码版本随共享运行时同步，未发布优香 DMG，也未将 macOS 默认主题、安装身份与更新器声明为已完成优香适配。
+- 保留 macOS 上游实现、历史说明和回归覆盖。Windows 功能与迁移范围见 [v1.9.2 中文](../docs/releases/v1.9.2.md) / [English](../docs/releases/v1.9.2-en.md)。
+
 ## 1.9.1 · 2026-11-08
 
 - 同步客户端与 macOS 安装包版本。功能更新见 [v1.9.1 发布说明](../docs/releases/v1.9.1.md)。

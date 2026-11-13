@@ -2,7 +2,9 @@
 
 [中文](README.md) · [English](README.en.md)
 
-从桌面、开始菜单打开 **Codex Dream Skin**，或双击托盘图标进入管理器。重复打开会激活已有窗口。
+从桌面、开始菜单打开 **Codex Dream Skin Yuuka**，或双击优香版托盘图标进入管理器。重复打开会激活已有窗口。
+
+主题库和偏好保存在 `%LOCALAPPDATA%\CodexDreamSkinYuuka`，与上游原版的目录和管理器窗口独立。
 
 ## 使用
 
@@ -10,7 +12,7 @@
 - 选择“跟随主题”恢复作者设置；主题未设置时采用 30%。偏好保存在 `theme-preferences.json`。
 - 选中非活动主题，点击“移到回收站…”并确认，即可删除本地主题目录。删除活动主题前先从托盘切换主题。原始 ZIP、活动快照和恢复文件会保留。
 
-管理器与运行时共用每用户的 Operation、ThemeImport 互斥锁，并校验目录身份及路径。
+管理器与运行时共用每用户的全局 Operation 互斥锁，避免两个版本同时修改 Codex；ThemeImport 和窗口互斥锁只属于优香版。所有主题操作仍校验目录身份及路径。
 
 ## 构建与检查
 

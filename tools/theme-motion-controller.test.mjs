@@ -663,6 +663,144 @@ function wallpaperFixture() {
   return page;
 }
 
+const yuukaConfig = (mode = "full", overrides = {}) => configuration(mode, {
+  themeId: "yuuka-seminar", artKey: "8d4c2008c9f7e7a5d74c",
+  artMetadata: { width: 1672, height: 941 }, yuukaMotionArt: ["data:image/png;base64,AAAA"], ...overrides,
+});
+test("Yuuka motion is artwork-bound and composes clipped eyes and hair without a second pet", async () => {
+  const bytes = await fs.readFile(new URL("../yuuka/background.png", import.meta.url));
+  assert.equal(createHash("sha256").update(bytes).digest("hex").slice(0, 20), yuukaConfig().artKey);
+  for (const themeId of ["yuuka-seminar", "yuuka-seminar-night"]) {
+    const page = wallpaperFixture(); page.install(yuukaConfig("full", { themeId }));
+    const art = motionRole(page, "background-character");
+    assert.ok(art);
+    assert.equal(page.root.getAttribute("data-dream-motion-art-profile"), "yuuka");
+    assert.equal(art.querySelector("svg").getAttribute("viewBox"), "0 0 1672 941");
+    assert.equal(art.querySelectorAll("[data-dream-motion-yuuka-blink]").length, 2);
+    assert.equal(art.querySelectorAll("[data-dream-motion-yuuka-hair]").length, 2);
+    assert.equal(art.getAttribute("data-dream-motion-art-visible"), "true");
+    assert.equal(motionRole(page, "character"), null);
+    assert.equal(art.style.getPropertyValue("top"), "0.00px");
+    assert.equal(art.style.getPropertyValue("height"), "800.00px");
+    page.state.cleanup(); assert.equal(art.isConnected, false);
+    assert.equal(page.root.getAttribute("data-dream-motion-art-profile"), null);
+  }
+});
+test("Yuuka motion stays absent for replaced art, disabled effects, reduced motion and task pages", () => {
+  for (const options of [{ artKey: "changed" }, { artKey: "8fe73b0cd207f60fdc08" }, { themeId: "other" }, { yuukaMotionArt: undefined },
+    { artMetadata: { width: 1672, height: 940 } }]) {
+    const page = wallpaperFixture(); page.install(yuukaConfig("full", options));
+    assert.equal(motionRole(page, "background-character"), null); page.state.cleanup();
+  }
+  for (const mode of ["system", "subtle", "off"]) {
+    const page = wallpaperFixture(); page.install(yuukaConfig(mode));
+    assert.equal(motionRole(page, "background-character"), null); page.state.cleanup();
+  }
+  for (const options of [{ reduced: true, home: true }, { home: false }]) {
+    const page = fixture(options); page.install(yuukaConfig());
+    assert.equal(motionRole(page, "background-character"), null); page.state.cleanup();
+  }
+  const page = wallpaperFixture(), config = yuukaConfig(); config.settings.effects.character = false;
+  page.install(config); assert.equal(motionRole(page, "background-character"), null); page.state.cleanup();
+});
+test("Yuuka background motion remains below native controls instead of hiding all four patches", () => {
+  const page = wallpaperFixture(); page.install(yuukaConfig());
+  const art = motionRole(page, "background-character");
+  const button = page.add(page.node("button"));
+  page.document.elementFromPoint = () => button;
+  page.global.dispatch("resize"); page.flush();
+  page.advance(120);
+  assert.equal(art.getAttribute("data-dream-motion-art-visible"), "true");
+  assert.equal(page.root.getAttribute("data-dream-motion-art-profile"), "yuuka");
+  page.state.cleanup();
+});
+
+test("Yuuka crops each patch independently at narrow viewport edges", () => {
+  const page = wallpaperFixture();
+  page.global.innerWidth = 720;
+  page.install(yuukaConfig());
+  const art = motionRole(page, "background-character");
+  assert.equal(art.getAttribute("data-dream-motion-art-visible"), "true");
+  assert.equal(art.querySelector('[data-dream-motion-yuuka-region="0"]').getAttribute("data-dream-motion-region-visible"), "true");
+  assert.equal(art.querySelector('[data-dream-motion-yuuka-region="1"]').getAttribute("data-dream-motion-region-visible"), "true");
+  assert.equal(art.querySelector('[data-dream-motion-yuuka-region="3"]').getAttribute("data-dream-motion-region-visible"), "false");
+  page.state.cleanup();
+});
+
+test("transparent main-panel mutation streams do not indefinitely suspend Yuuka background motion", () => {
+  const page = wallpaperFixture(); page.install(yuukaConfig());
+  const art = motionRole(page, "background-character");
+  for (let index = 0; index < 60; index += 1) {
+    page.attribute(page.surface, "style", `opacity:${index % 2 ? '.9' : '1'}`);
+    page.flush(); page.advance(16);
+    assert.equal(art.getAttribute("data-dream-motion-art-visible"), "true");
+  }
+  page.state.cleanup();
+});
+
+test("Yuuka shares one closed-eye source and the existing wallpaper and reuses unchanged placement", () => {
+  const page = wallpaperFixture();
+  let hits = 0;
+  const original = page.document.elementFromPoint;
+  page.document.elementFromPoint = (...args) => { hits += 1; return original(...args); };
+  page.install(yuukaConfig());
+  const art = motionRole(page, "background-character");
+  const images = art.querySelectorAll("image");
+  assert.deepEqual(images.map((node) => [Number(node.getAttribute("width")), Number(node.getAttribute("height"))]),
+    [[1672, 941], [1672, 941]]);
+  assert.equal(images[0].getAttribute("href"), yuukaConfig().yuukaMotionArt[0]);
+  assert.equal(images[1].getAttribute("href"), "blob:app://old-art");
+  assert.equal(art.querySelectorAll("use").length, 4);
+  const firstHits = hits;
+  assert.ok(firstHits > 0 && firstHits <= 1600);
+  for (let index = 0; index < 50; index += 1) page.document.dispatch("visibilitychange");
+  assert.equal(hits, firstHits, "state refreshes with unchanged geometry must not repeat hit testing");
+  assert.equal(art.getAttribute("data-dream-motion-art-visible"), "true");
+  page.state.cleanup();
+});
+
+test("Yuuka navigation immediately revokes home artwork before the paused frame", () => {
+  const page = wallpaperFixture(); page.install(yuukaConfig());
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "home");
+  assert.ok(motionRole(page, "background-character"));
+  page.global.navigation.dispatch("navigate");
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "other");
+  assert.equal(motionRole(page, "background-character"), null);
+  assert.equal(motionRole(page, "ambient"), null);
+  page.attribute(page.surface, "data-ds-part", "thread");
+  page.global.navigation.dispatch("navigatesuccess"); page.flush();
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "thread");
+  assert.equal(motionRole(page, "background-character"), null);
+  page.attribute(page.surface, "data-ds-part", "home"); page.flush();
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "home");
+  assert.ok(motionRole(page, "background-character"));
+  page.state.cleanup();
+});
+
+test("Yuuka immediately hides during geometry bursts and does one placement after settling", () => {
+  const page = wallpaperFixture();
+  let hits = 0;
+  const original = page.document.elementFromPoint;
+  page.document.elementFromPoint = (...args) => { hits += 1; return original(...args); };
+  page.install(yuukaConfig());
+  const art = motionRole(page, "background-character"), initial = hits;
+  const initialRefreshes = page.state.metrics.refreshes;
+  for (let index = 0; index < 60; index += 1) {
+    page.attribute(page.body, "style", `height:${index}px`);
+    page.flush(); page.advance(16);
+    assert.equal(art.getAttribute("data-dream-motion-art-visible"), "false");
+  }
+  assert.equal(hits, initial, "streaming style changes must not hit test every animation frame");
+  assert.equal(page.state.metrics.refreshes, initialRefreshes, "geometry-only mutations must not rescan tracked task state");
+  page.advance(120);
+  assert.ok(hits > initial && hits <= initial + 1600);
+  assert.equal(art.getAttribute("data-dream-motion-art-visible"), "true");
+  page.global.dispatch("resize"); page.flush();
+  const beforeCleanup = hits;
+  page.state.cleanup(); page.advance(200);
+  assert.equal(hits, beforeCleanup, "pending placement work must be cancelled on cleanup");
+});
+
 test("shared half/closed eyelids preserve the legacy pixel artwork", async () => {
   const legacy = await fs.readFile(new URL("../windows/assets/renderer-inject.js", import.meta.url), "utf8");
   const page = wallpaperFixture(); page.install(wallpaperConfig());

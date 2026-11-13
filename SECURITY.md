@@ -1,5 +1,11 @@
 # Security boundary / 安全边界
 
+Yuuka v1.9.2 ships a Windows package only. References to macOS and Linux below
+describe inherited source behavior, not supported Yuuka releases.
+
+优香 v1.9.2 仅发行 Windows 安装包。下文 macOS/Linux 说明描述保留的上游源码行为，
+不代表已发布或支持这些平台的优香版本。
+
 Codex Dream Skin is an unofficial local customization tool. It avoids modifying
 the official Codex package, but it relies on the Chrome DevTools Protocol (CDP)
 to inject the theme into a running Codex renderer.

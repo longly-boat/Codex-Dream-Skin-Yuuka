@@ -13,7 +13,7 @@ internal sealed class SingleInstance : IDisposable
     public SingleInstance(string? testSuffix = null)
     {
         var sid = WindowsIdentity.GetCurrent().User?.Value ?? throw new InvalidOperationException("Current user is unavailable.");
-        var name = $"Local\\CodexDreamSkin.{sid}.ThemeManager{testSuffix}";
+        var name = $"Local\\{ProductIdentity.StateDirectoryName}.{sid}.ThemeManager{testSuffix}";
         // Open the event first, so a second launch during startup is remembered.
         activation = new EventWaitHandle(false, EventResetMode.AutoReset, name + ".Activate");
         mutex = new Mutex(false, name);

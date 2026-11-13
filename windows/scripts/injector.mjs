@@ -44,7 +44,7 @@ const stableTestidLiteral = (testid) => {
   }
   return JSON.stringify(`[data-testid="${testid}"]`);
 };
-const SKIN_VERSION = "1.9.1";
+const SKIN_VERSION = "1.9.2";
 // .github/workflows/ci.yml's version-consistency check greps this file for a
 // literal `const SKIN_VERSION = "...";` line, so the export stays a separate
 // statement rather than an inline `export const`.
@@ -832,9 +832,10 @@ export async function loadPayload(
   }
   const loadedTheme = candidateTheme ?? await loadTheme(themeDir);
   const motionPreferences = await readMotionPreferences(motionSettingsPath);
+  const yuukaTheme = ["yuuka-seminar", "yuuka-seminar-night"].includes(loadedTheme.theme.id);
   const [baseCss, template, internetAngelCss, internetAngelTemplate, acrylicCss, motionCss, motionTemplate] = await Promise.all([
-    fs.readFile(path.join(root, "assets", "dream-skin.css"), "utf8"),
-    fs.readFile(path.join(root, "assets", "renderer-inject.js"), "utf8"),
+    fs.readFile(path.join(root, "assets", yuukaTheme ? "yuuka-skin.css" : "dream-skin.css"), "utf8"),
+    fs.readFile(path.join(root, "assets", yuukaTheme ? "yuuka-renderer.js" : "renderer-inject.js"), "utf8"),
     fs.readFile(path.join(root, "assets", "internet-angel-extension.css"), "utf8"),
     fs.readFile(path.join(root, "assets", "internet-angel-extension.js"), "utf8"),
     fs.readFile(path.join(root, "assets", "internet-angel-acrylic.css"), "utf8"),

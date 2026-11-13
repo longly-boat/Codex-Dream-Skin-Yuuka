@@ -344,7 +344,7 @@ function Assert-DreamSkinSafeCssFile {
 }
 
 function Get-DreamSkinThemePaths {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
   $fullRoot = [System.IO.Path]::GetFullPath($StateRoot)
   return [pscustomobject]@{
     Root = $fullRoot
@@ -640,7 +640,7 @@ function Invoke-DreamSkinRetiredThemeMigration {
 function Initialize-DreamSkinThemeStore {
   param(
     [Parameter(Mandatory = $true)][string]$SkillRoot,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   foreach ($directory in @($paths.Root, $paths.Active, $paths.Saved, $paths.Images)) {
@@ -649,72 +649,42 @@ function Initialize-DreamSkinThemeStore {
   Invoke-DreamSkinThemeReplacementRecovery -Paths $paths
   $assetRoot = Join-Path $SkillRoot 'assets'
   $bundledTheme = Read-DreamSkinTheme -ThemeDirectory $assetRoot
-  $assetImage = $bundledTheme.ImagePath
-  $assetImageName = [System.IO.Path]::GetFileName($assetImage)
-  $bundledPresetId = "$($bundledTheme.Theme.id)"
-  if ($bundledPresetId -cnotmatch '^preset-[A-Za-z0-9_-]{1,72}$') {
-    throw "Bundled theme id must be a safe preset id: $bundledPresetId"
-  }
+  $bundledId = "$($bundledTheme.Theme.id)"
+  if ($bundledId -cne 'yuuka-seminar') { throw 'The Yuuka default theme is missing or has an unexpected identity.' }
+  $bundledCss = Join-Path $assetRoot 'theme.css'
+  Assert-DreamSkinSafeCssFile -Path $bundledCss
   $activeTheme = Join-Path $paths.Active 'theme.json'
   Assert-DreamSkinNoReparseComponents -Path $activeTheme
+  # Seed once. Never reset a migrated selection, custom art or opacity on launch.
   if (-not (Test-Path -LiteralPath $activeTheme -PathType Leaf)) {
-    Ensure-DreamSkinManagedDirectory -Path $paths.Active -Root $paths.Root
-    Assert-DreamSkinNoReparseComponents -Path (Join-Path $paths.Active $assetImageName)
-    $activeImage = Join-Path $paths.Active $assetImageName
-    Copy-Item -LiteralPath $assetImage -Destination $activeImage -Force
-    Assert-DreamSkinNoReparseComponents -Path $activeImage
-    Assert-DreamSkinImageFile -Path $activeImage
-    $imageArchive = Join-Path $paths.Images $assetImageName
-    Assert-DreamSkinNoReparseComponents -Path $imageArchive
-    Copy-Item -LiteralPath $assetImage -Destination $imageArchive -Force
-    Assert-DreamSkinNoReparseComponents -Path $imageArchive
-    Assert-DreamSkinImageFile -Path $imageArchive
-    Assert-DreamSkinNoReparseComponents -Path $activeTheme
-    Copy-Item -LiteralPath (Join-Path $assetRoot 'theme.json') -Destination $activeTheme -Force
+    $null = Set-DreamSkinActiveTheme -ImagePath $bundledTheme.ImagePath -Theme $bundledTheme.Theme `
+      -SafeCssPath $bundledCss -StateRoot $StateRoot
   }
-  $null = Update-DreamSkinLegacyManagedActiveThemeSchema `
-    -ThemeDirectory $paths.Active -ManagedRoot $paths.Root
-  # Refresh only the retained JPEG; recognized retired packs are archived below.
-  $presetDirectory = Join-Path $paths.Saved $bundledPresetId
-  $presetTheme = Join-Path $presetDirectory 'theme.json'
-  Assert-DreamSkinNoReparseComponents -Path $presetDirectory
-  Assert-DreamSkinNoReparseComponents -Path $presetTheme
-  # Refresh the saved copy on every run (matching macOS seeding) so preset
-  # metadata upgrades — e.g. the #183 appearance pin — reach existing installs.
-  Ensure-DreamSkinManagedDirectory -Path $presetDirectory -Root $paths.Root
-  $presetImage = Join-Path $presetDirectory $assetImageName
-  Assert-DreamSkinNoReparseComponents -Path $presetImage
-  Copy-Item -LiteralPath $assetImage -Destination $presetImage -Force
-  Assert-DreamSkinNoReparseComponents -Path $presetImage
-  Assert-DreamSkinImageFile -Path $presetImage
-  Assert-DreamSkinNoReparseComponents -Path $presetTheme
-  Copy-Item -LiteralPath (Join-Path $assetRoot 'theme.json') -Destination $presetTheme -Force
-  # Refresh the staged active copy of official presets too; otherwise metadata
-  # staged by an older engine (e.g. pre-#183 appearance "auto") keeps steering
-  # the appearanceTheme pin after upgrades.
-  if (Test-Path -LiteralPath $activeTheme -PathType Leaf) {
-    $activeId = ''
+  $null = Update-DreamSkinLegacyManagedActiveThemeSchema -ThemeDirectory $paths.Active -ManagedRoot $paths.Root
+  foreach ($id in @('yuuka-seminar', 'yuuka-seminar-night')) {
+    $source = if ($id -ceq $bundledId) { $assetRoot } else { Join-Path $SkillRoot ('presets\' + $id) }
+    $pack = Read-DreamSkinTheme -ThemeDirectory $source
+    if ("$($pack.Theme.id)" -cne $id) { throw 'The bundled Yuuka preset identity does not match its folder.' }
+    $css = Join-Path $source 'theme.css'
+    Assert-DreamSkinSafeCssFile -Path $css
+    $destination = Join-Path $paths.Saved $id
+    Assert-DreamSkinNoReparseComponents -Path $destination
+    if (Test-Path -LiteralPath $destination) { continue }
+    $staging = Join-Path $paths.Saved ('.seed-' + [guid]::NewGuid().ToString('N'))
     try {
-      $activeId = "$((Read-DreamSkinTheme -ThemeDirectory $paths.Active -SkipImageMetadata).Theme.id)"
-    } catch {}
-    $refreshSource = $null
-    if ($activeId -ceq $bundledPresetId) { $refreshSource = $assetRoot }
-    if ($null -ne $refreshSource) {
-      $sourcePack = Read-DreamSkinTheme -ThemeDirectory $refreshSource
-      $sourceJson = Read-DreamSkinUtf8File -Path $sourcePack.ThemePath
-      $activeJson = Read-DreamSkinUtf8File -Path $activeTheme
-      if ($sourceJson -cne $activeJson) {
-        $sourceImageName = [System.IO.Path]::GetFileName($sourcePack.ImagePath)
-        $refreshedImage = Join-Path $paths.Active $sourceImageName
-        Assert-DreamSkinNoReparseComponents -Path $refreshedImage
-        Copy-Item -LiteralPath $sourcePack.ImagePath -Destination $refreshedImage -Force
-        Assert-DreamSkinNoReparseComponents -Path $refreshedImage
-        Assert-DreamSkinImageFile -Path $refreshedImage
-        Copy-Item -LiteralPath $sourcePack.ThemePath -Destination $activeTheme -Force
+      Ensure-DreamSkinManagedDirectory -Path $staging -Root $paths.Root
+      foreach ($file in @($pack.ThemePath, $css, $pack.ImagePath)) {
+        Copy-Item -LiteralPath $file -Destination $staging -ErrorAction Stop
+      }
+      $null = Read-DreamSkinTheme -ThemeDirectory $staging
+      Assert-DreamSkinSafeCssFile -Path (Join-Path $staging 'theme.css')
+      [IO.Directory]::Move($staging, $destination)
+    } finally {
+      if (Test-Path -LiteralPath $staging) {
+        Remove-DreamSkinManagedDirectoryVerified -Path $staging -Root $paths.Root
       }
     }
   }
-  Invoke-DreamSkinRetiredThemeMigration -SkillRoot $SkillRoot -StateRoot $StateRoot
   $null = Read-DreamSkinTheme -ThemeDirectory $paths.Active
   return $paths
 }
@@ -731,7 +701,7 @@ function Set-DreamSkinActiveTheme {
     [AllowNull()][object]$Theme,
     [string]$Name,
     [AllowNull()][string]$SafeCssPath,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   Ensure-DreamSkinManagedDirectory -Path $paths.Root -Root $paths.Root
@@ -805,7 +775,7 @@ function Set-DreamSkinActiveTheme {
 function Set-DreamSkinActiveThemeImage {
   param(
     [Parameter(Mandatory = $true)][string]$ImagePath,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   $current = Read-DreamSkinTheme -ThemeDirectory $paths.Active
@@ -827,7 +797,7 @@ function Set-DreamSkinActiveThemeImage {
 function Save-DreamSkinCurrentTheme {
   param(
     [Parameter(Mandatory = $true)][string]$Name,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $trimmed = $Name.Trim()
   if (-not $trimmed -or $trimmed.Length -gt 80 -or $trimmed -match '[\u0000-\u001f]') {
@@ -1442,7 +1412,7 @@ function Test-DreamSkinLegacySuffixRecord {
 
 function New-DreamSkinThemeImportMutex {
   $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-  return [System.Threading.Mutex]::new($false, "Local\CodexDreamSkin.$sid.ThemeImport")
+  return [System.Threading.Mutex]::new($false, "Local\CodexDreamSkinYuuka.$sid.ThemeImport")
 }
 
 function Assert-DreamSkinThemeReplacementLeafName {
@@ -1898,7 +1868,7 @@ function Invoke-DreamSkinThemeReplacementRecovery {
 function Import-DreamSkinThemeZip {
   param(
     [Parameter(Mandatory = $true)][string]$ArchivePath,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'),
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'),
     [int64]$ExpectedArchiveBytes = -1,
     [AllowNull()][string]$ExpectedArchiveSha256
   )
@@ -2293,7 +2263,7 @@ function Import-DreamSkinThemeZip {
 
 function Get-DreamSkinSavedThemes {
   param(
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'),
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'),
     [switch]$SkipImageMetadata
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
@@ -2328,7 +2298,7 @@ function Get-DreamSkinSavedThemes {
 function Use-DreamSkinSavedTheme {
   param(
     [Parameter(Mandatory = $true)][string]$ThemeDirectory,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   Ensure-DreamSkinManagedDirectory -Path $paths.Root -Root $paths.Root
@@ -2387,7 +2357,7 @@ function Use-DreamSkinSavedTheme {
 function Set-DreamSkinPaused {
   param(
     [Parameter(Mandatory = $true)][bool]$Paused,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   Ensure-DreamSkinManagedDirectory -Path $paths.Root -Root $paths.Root
@@ -2402,12 +2372,12 @@ function Set-DreamSkinPaused {
 }
 
 function Test-DreamSkinPaused {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
   return (Test-Path -LiteralPath (Get-DreamSkinThemePaths -StateRoot $StateRoot).PauseFile -PathType Leaf)
 }
 
 function Get-DreamSkinLiveSessionContext {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
   $paths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   $state = $null
   try { $state = Read-DreamSkinState -Path $paths.State } catch { $state = $null }
@@ -2483,7 +2453,7 @@ function Show-DreamSkinOperationUi {
 # Writing only the pause file leaves CSS in the renderer until the watcher polls.
 function Invoke-DreamSkinLiveRemove {
   param(
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'),
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'),
     [int]$TimeoutMs = 8000,
     [string]$PauseNoSessionMessage = '没有可连接的活动会话；已记录暂停，当前窗口可能仍显示皮肤。',
     [string]$PauseSucceededMessage = '皮肤已暂停',

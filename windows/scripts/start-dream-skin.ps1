@@ -124,12 +124,11 @@ function Restore-DreamSkinStartupThemeSelection {
 function Assert-DreamSkinOfficialProfileLaunchReady {
   param([object]$Codex, [int]$ExpectedSessionId)
 
-  # Match the exact Store packages verified with the official profile and AUMID.
-  if ($Codex.PackageFullName -notin @(
-    'OpenAI.Codex_26.1027.3384.0_x64__2p2nqsd0c76g0',
-    'OpenAI.Codex_26.1103.4239.0_x64__2p2nqsd0c76g0'
-  )) {
-    throw 'This Codex Store build has not been verified with -UseOfficialProfile.'
+  # Discover versions from the Store registration, not a build allowlist.
+  # Keep the official publisher identity and revalidate the exact selected
+  # package/path below so an update during preparation cannot change targets.
+  if ("$($Codex.PackageFullName)" -cnotmatch '^OpenAI\.Codex_\d+\.\d+\.\d+\.\d+_(x64|arm64|x86)__2p2nqsd0c76g0$') {
+    throw 'The Codex Store package identity is not supported with -UseOfficialProfile.'
   }
   $registeredInstalls = @(Get-DreamSkinRegisteredCodexInstalls)
   if ($registeredInstalls.Count -eq 0 -or
@@ -144,7 +143,17 @@ function Assert-DreamSkinOfficialProfileLaunchReady {
   }
 }
 
-$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
+$startupClock = [Diagnostics.Stopwatch]::StartNew()
+function Write-DreamSkinStartupTiming([string]$Stage) {
+  if (-not $AutoRestartStock) { return }
+  try {
+    [IO.File]::AppendAllText((Join-Path $StateRoot 'startup-timing.log'),
+      ('{0} pid={1} ms={2} {3}' -f [DateTime]::UtcNow.ToString('o'), $PID, $startupClock.ElapsedMilliseconds, $Stage) + [Environment]::NewLine)
+  } catch {}
+}
+Write-DreamSkinStartupTiming 'begin'
+
 $operationLock = $null
 $startFailureCategory = 'internal-start-failure'
 $appearanceTransaction = $null
@@ -154,6 +163,7 @@ $debugLaunchAttempted = $false
 try {
   $operationLock = Enter-DreamSkinOperationLock `
     -TimeoutMilliseconds $OperationLockTimeoutMilliseconds
+  Assert-YuukaLegacyEngineInactive
   if ($AutoRestartStock -and ($RestartExisting -or $PromptRestart)) {
     throw '-AutoRestartStock cannot be combined with -RestartExisting or -PromptRestart.'
   }
@@ -167,6 +177,9 @@ try {
     $RestartExisting -or $AutoRestartStock -or $PromptRestart -or $ForegroundInjector -or
     $SavedThemeDirectory)) {
     throw '-UseOfficialProfile requires a standalone background launch with the default Codex data path.'
+  }
+  if ($AutoRestartStock -and ($ProfilePath -or $env:CODEX_ELECTRON_USER_DATA_PATH)) {
+    throw 'Automatic official-entry takeover requires the existing default Codex profile.'
   }
   Assert-DreamSkinPort -Port $Port
   if ($SavedThemeDirectory -and $ForegroundInjector) {
@@ -213,7 +226,7 @@ try {
   $configPaths = Resolve-DreamSkinConfigPaths -StateRoot $StateRoot -BindBackup
   $ConfigPath = $configPaths.ConfigPath
   $BackupPath = $configPaths.BackupPath
-  if (-not $UseOfficialProfile -and -not $ProfilePathExplicit) {
+  if (-not $UseOfficialProfile -and -not $AutoRestartStock -and -not $ProfilePathExplicit) {
     # Older Store builds require a separate persistent data path to expose CDP.
     $ProfilePath = [System.IO.Path]::GetFullPath((Join-Path $StateRoot 'cdp-profile'))
     Ensure-DreamSkinManagedDirectory -Path $ProfilePath -Root $StateRoot
@@ -241,6 +254,7 @@ try {
     $sessionParameters.ExpectedSessionId = $autoRestartExpectedSessionId
   }
 
+  Write-DreamSkinStartupTiming 'configuration-ready'
   $previousState = Read-DreamSkinState -Path $StatePath
   $previousStateOwnership = Get-DreamSkinRecordedStateSessionOwnership `
     -State $previousState -StateRoot $StateRoot
@@ -375,7 +389,7 @@ try {
     try {
       $autoRestartSnapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
         -RegisteredInstalls @(Get-DreamSkinRegisteredCodexInstalls) `
-        -ExpectedSessionId $autoRestartExpectedSessionId
+        -ExpectedSessionId $autoRestartExpectedSessionId -MainProcessOnly
     } catch {
       Write-Host "Automatic Dream Skin restart skipped: the reserved Codex process set could not be verified: $($_.Exception.Message)"
       return
@@ -441,12 +455,14 @@ try {
       $cdpIdentity = $null
     }
     if ($AutoRestartStock) {
+      Write-DreamSkinStartupTiming 'close-main-begin'
       Stop-DreamSkinCodex -Codex $codexToStop -AllowForce `
-        -ExpectedAutoRestartTargets @($autoRestartReservation.TargetProcesses) `
+        -ExpectedAutoRestartTargets @($autoRestartReservation.TargetProcesses) -MainProcessOnly `
         -AutoRestartStateRoot $StateRoot
     } else {
       Stop-DreamSkinCodex -Codex $codexToStop -AllowForce
     }
+    Write-DreamSkinStartupTiming 'close-main-end'
     $closedExistingCodex = $true
     $codex = $currentCodex
     if ($AutoRestartStock) {
@@ -461,6 +477,13 @@ try {
     }
   }
 
+  if ($AutoRestartStock) {
+    # The bound main process is closed and the full process set reached zero.
+    # Use the same verified package activation as the working Yuuka launcher.
+    $UseOfficialProfile = $true
+    $officialProfileSessionId = $autoRestartExpectedSessionId
+  }
+  Write-DreamSkinStartupTiming 'stable-zero-ready'
   $launchedWithCdp = $false
   $debugLaunch = $null
   $debugLaunchBaselineProcessIds = @()
@@ -468,7 +491,9 @@ try {
   $skinLooksRendered = $false
   $acrylicDescriptor = $null
   try {
-    if ($UseOfficialProfile) {
+    # Auto takeover just proved a full stable-zero boundary. The fresh
+    # official-profile check immediately before activation remains mandatory.
+    if ($UseOfficialProfile -and -not $AutoRestartStock) {
       Assert-DreamSkinOfficialProfileLaunchReady -Codex $codex -ExpectedSessionId $officialProfileSessionId
     }
     if ($pendingAppearanceTransaction) {
@@ -543,27 +568,26 @@ try {
         New-Item -ItemType Directory -Force -Path $ProfilePath | Out-Null
       }
       if ($ProfilePath) { $arguments += "--user-data-dir=$ProfilePath" }
-      if ($UseOfficialProfile) {
+      if ($UseOfficialProfile -and -not $AutoRestartStock) {
         Assert-DreamSkinOfficialProfileLaunchReady -Codex $codex -ExpectedSessionId $officialProfileSessionId
       }
       if ($AutoRestartStock) {
         try {
           Assert-DreamSkinAutoRestartControlClear -StateRoot $StateRoot
-          $preLaunchSnapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
-            -RegisteredInstalls @(Get-DreamSkinRegisteredCodexInstalls) `
+          # One fresh gate checks the registered package/version and all
+          # remaining processes, replacing two adjacent zero-state snapshots.
+          Assert-DreamSkinOfficialProfileLaunchReady -Codex $codex `
             -ExpectedSessionId $autoRestartExpectedSessionId
-          if (@($preLaunchSnapshot.TargetProcesses).Count -ne 0) {
-            throw 'A new Codex process appeared at the automatic activation boundary.'
-          }
         } catch {
           Invoke-DreamSkinAutoRestartStockRecovery -StateRoot $StateRoot `
             -Codex $currentCodex -ExpectedSessionId $autoRestartExpectedSessionId `
             -FailureMessage "Automatic Dream Skin activation failed before direct launch: $($_.Exception.Message)"
         }
       }
+      Write-DreamSkinStartupTiming 'activation-begin'
       $debugLaunchAttempted = $true
       $startFailureCategory = 'cdp-launch-failed'
-      if ($AutoRestartStock) {
+      if ($AutoRestartStock -and -not $UseOfficialProfile) {
         # The official handoff has already closed one exact reserved session and
         # proved a same-session stable zero. Launch the validated Store
         # executable directly so a package-protocol redirect does not require a
@@ -594,6 +618,7 @@ try {
           $cdpOwnerParameters.ExpectedProcessId = [int]$debugLaunch.ProcessId
         }
       }
+      Write-DreamSkinStartupTiming 'activation-end'
       $launchedWithCdp = $true
       if ($debugLaunch.Strategy -eq 'direct-store-executable' -and
         $debugLaunch.PackageArgumentStatus -ne 'not-attempted') {
@@ -622,6 +647,7 @@ try {
       $cdpIdentity = Get-DreamSkinVerifiedCdpIdentity -Port $Port -Codex $codex `
         @cdpOwnerParameters
     }
+    Write-DreamSkinStartupTiming 'cdp-ready'
     $win32Window = Wait-DreamSkinWin32WindowEvidence -Codex $codex `
       -TimeoutMilliseconds 30000 @sessionParameters
     if ($null -eq $win32Window) {
@@ -632,6 +658,7 @@ try {
         -not (Test-DreamSkinCodexPortOwner -Port $Port -Codex $codex @cdpOwnerParameters))) {
       throw 'The Codex window and debugging listener did not match the official activation.'
     }
+    Write-DreamSkinStartupTiming 'window-ready'
     $win32WindowArgs = @(
       '--win32-window-pid', "$($win32Window.ProcessId)",
       '--win32-window-hwnd', "$($win32Window.Handle)",
@@ -895,6 +922,7 @@ try {
       '--browser-id', $cdpIdentity.BrowserId, '--theme-dir',
       (ConvertTo-DreamSkinProcessArgument -Value $themePaths.Active), '--pause-file',
       (ConvertTo-DreamSkinProcessArgument -Value $themePaths.PauseFile)) + $injectorWindowArgs
+    Write-DreamSkinStartupTiming 'injector-start'
     $daemon = Start-Process -FilePath $node.Path -ArgumentList $injectorArgs -WindowStyle Hidden -PassThru `
       -RedirectStandardOutput $StdoutPath -RedirectStandardError $StderrPath
     Start-Sleep -Milliseconds 500
@@ -1241,7 +1269,8 @@ try {
     throw $startupError
   }
 
-  Write-Host "Codex Dream Skin is active on verified loopback port $Port."
+  Write-DreamSkinStartupTiming 'verified'
+  Write-Host "Codex Dream Skin Yuuka is active on verified loopback port $Port."
   if ($ResultToken) {
     Write-DreamSkinStartResult -StateRoot $StateRoot -Token $ResultToken `
       -Outcome 'success' -Category 'none' -AppearanceRecovery $appearanceRecovery

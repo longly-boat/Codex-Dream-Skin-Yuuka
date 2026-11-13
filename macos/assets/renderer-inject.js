@@ -47,6 +47,7 @@
     "preset-internet-angel-default",
   ]);
   const isInternetAngelTheme = INTERNET_ANGEL_THEME_IDS.has(String(THEME.id || "").trim());
+  const isYuukaTheme = ["yuuka-seminar", "yuuka-seminar-night"].includes(String(THEME.id || "").trim());
   // Only adapt declarations in the already validated community layer. Keep
   // foregrounds, borders and element opacity intact. Relative colors preserve
   // authored RGB/alpha (including percentages); local preferences replace alpha
@@ -851,8 +852,182 @@
       '[class*="max-w-"][class*="rounded-2xl"][class*="text-start"]',
     ) ?? node;
   });
+  // Persistent local checklist. Keep this store independent of native chats,
+  // goals and projects; only this namespaced key is ever read or written.
+  const YUUKA_PLAN_KEY = "codex-dream-skin:yuuka:daily-plan:v1";
+  const createYuukaPlanStore = (getStorage, makeId) => {
+    const read = () => {
+      let raw;
+      try { raw = getStorage().getItem(YUUKA_PLAN_KEY); }
+      catch { return { items: [], error: "无法读取本机计划，请稍后重试。" }; }
+      if (raw === null) return { items: [], error: null };
+      try {
+        if (raw.length > 65536) throw new Error("size");
+        const value = JSON.parse(raw);
+        if (value?.version !== 1 || !Array.isArray(value.items) || value.items.length > 100) throw new Error("schema");
+        const ids = new Set();
+        const items = value.items.map(item => {
+          if (!item || typeof item.id !== "string" || !/^[a-zA-Z0-9-]{1,80}$/.test(item.id)
+            || ids.has(item.id) || typeof item.text !== "string" || !item.text.trim() || item.text.length > 120
+            || typeof item.done !== "boolean") throw new Error("item");
+          ids.add(item.id);
+          return { id: item.id, text: item.text, done: item.done };
+        });
+        return { items, error: null };
+      } catch { return { items: [], error: "已保存的计划格式异常，原数据已保留，暂不覆盖。" }; }
+    };
+    const change = (operation, value) => {
+      // Re-read before every edit so other windows' completed writes survive.
+      const current = read();
+      if (current.error) return current;
+      let items = current.items;
+      if (operation === "add") {
+        const text = String(value).trim();
+        if (!text || text.length > 120) return { ...current, error: "请填写 1–120 字的计划。" };
+        if (items.length >= 100) return { ...current, error: "最多保存 100 项，请先删除不需要的计划。" };
+        const id = makeId();
+        if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || items.some(item => item.id === id)) return { ...current, error: "未能创建计划，请重试。" };
+        items = [...items, { id, text, done: false }];
+      } else if (operation === "done") {
+        items = items.map(item => item.id === value.id ? { ...item, done: Boolean(value.done) } : item);
+      } else if (operation === "remove") {
+        items = items.filter(item => item.id !== value);
+      } else return { ...current, error: "不支持的计划操作。" };
+      try { getStorage().setItem(YUUKA_PLAN_KEY, JSON.stringify({ version: 1, items })); }
+      catch { return { ...current, error: "保存失败，修改未生效；请检查本机存储后重试。" }; }
+      return { items, error: null };
+    };
+    return { read, change };
+  };
+
+  let yuukaGreetingNode = null;
+  let yuukaGreetingTitle = null;
+  let yuukaNativeHero = null;
+  let yuukaHiddenValue = null;
+  let yuukaAriaValue = null;
+  const yuukaSidebarBadges = new Map();
+  const yuukaProjectIcons = new Set();
+  const yuukaWorkspaceTitles = new Set();
+  const clearYuukaSidebar = () => {
+    for (const title of yuukaWorkspaceTitles) title.removeAttribute("data-yuuka-workspace-title");
+    yuukaWorkspaceTitles.clear();
+    for (const icon of yuukaProjectIcons) icon.removeAttribute("data-yuuka-project-icon");
+    yuukaProjectIcons.clear();
+    for (const [button, badge] of yuukaSidebarBadges) {
+      badge.remove();
+      button.removeAttribute("data-yuuka-new-chat");
+    }
+    yuukaSidebarBadges.clear();
+  };
+  const syncYuukaSidebar = () => {
+    if (!isYuukaTheme) return;
+    const sidebars = [...selectorNodes("left-panel"), ...selectorNodes("floating-left-panel")];
+    const buttons = sidebars.flatMap(sidebar => [...sidebar.querySelectorAll('button, [role="button"]')]);
+    const workspaceTitles = buttons.filter(button => button.hasAttribute?.('data-app-action-sidebar-section-toggle')
+      && /^(项目|Projects)$/i.test((button.textContent || "").trim()));
+    for (const title of yuukaWorkspaceTitles) {
+      if (!workspaceTitles.includes(title)) {
+        title.removeAttribute("data-yuuka-workspace-title");
+        yuukaWorkspaceTitles.delete(title);
+      }
+    }
+    for (const title of workspaceTitles) {
+      if (!yuukaWorkspaceTitles.has(title)) {
+        title.setAttribute("data-yuuka-workspace-title", "");
+        yuukaWorkspaceTitles.add(title);
+      }
+    }
+    const projectRows = sidebars.flatMap(sidebar => [...sidebar.querySelectorAll('[class~="group/folder-row"]')]);
+    for (const button of projectRows) {
+      // Project rows contain their own project-actions button; chat rows do not.
+      const actions = button.querySelector?.('[aria-label$="的项目操作"], [aria-label$="project actions" i]');
+      const icon = actions ? button.querySelector?.('.icon-leading-slot > span:first-child') : null;
+      if (icon && !actions.contains(icon) && !yuukaProjectIcons.has(icon)) {
+        icon.setAttribute("data-yuuka-project-icon", "");
+        yuukaProjectIcons.add(icon);
+      }
+    }
+    for (const [button, badge] of yuukaSidebarBadges) {
+      if (!buttons.includes(button) || button.clientWidth < 150) {
+        badge.remove();
+        button.removeAttribute("data-yuuka-new-chat");
+        yuukaSidebarBadges.delete(button);
+      }
+    }
+    for (const button of buttons) {
+      if (yuukaSidebarBadges.has(button)) continue;
+      const label = (button.getAttribute("aria-label") || button.textContent || "").trim();
+      if (!["新聊天", "New chat"].includes(label)) continue;
+      if (!(button.clientWidth >= 150)) continue;
+      // Use an existing button's normal inline/flex flow. Never append to the
+      // shell: its absolute-positioned children do not reserve badge space.
+      const badge = document.createElement("span");
+      badge.setAttribute("data-yuuka-schale", "");
+      badge.setAttribute("aria-hidden", "true");
+      badge.textContent = "SCHALE";
+      button.setAttribute("data-yuuka-new-chat", "");
+      button.appendChild(badge);
+      yuukaSidebarBadges.set(button, badge);
+    }
+  };
+  const clearYuukaGreeting = () => {
+    yuukaGreetingNode?.remove?.();
+    yuukaGreetingNode = null;
+    yuukaGreetingTitle = null;
+    if (yuukaNativeHero) {
+      if (yuukaHiddenValue === null) yuukaNativeHero.removeAttribute("data-yuuka-native-hidden");
+      else yuukaNativeHero.setAttribute("data-yuuka-native-hidden", yuukaHiddenValue);
+      if (yuukaAriaValue === null) yuukaNativeHero.removeAttribute("aria-hidden");
+      else yuukaNativeHero.setAttribute("aria-hidden", yuukaAriaValue);
+    }
+    yuukaNativeHero = null;
+  };
+  const syncYuukaGreeting = (nativeHero) => {
+    // The verified game-source node is the native greeting, not the whole
+    // Home route. Do not hide an unknown fallback that may own the composer.
+    const exactHero = selectorNodes("game-source")[0];
+    if (!isYuukaTheme || !exactHero || exactHero !== nativeHero || !exactHero.parentElement
+      || exactHero.matches?.('main, [role="main"], [data-ds-part="main"], [data-ds-part="composer"]')
+      || exactHero.querySelector?.('textarea, [contenteditable="true"], [role="textbox"]')) {
+      clearYuukaGreeting();
+      return nativeHero;
+    }
+    if (yuukaNativeHero !== exactHero || yuukaGreetingNode?.parentElement !== exactHero.parentElement) {
+      clearYuukaGreeting();
+      yuukaNativeHero = exactHero;
+      yuukaHiddenValue = exactHero.getAttribute("data-yuuka-native-hidden");
+      yuukaAriaValue = exactHero.getAttribute("aria-hidden");
+      exactHero.setAttribute("data-yuuka-native-hidden", "true");
+      exactHero.setAttribute("aria-hidden", "true");
+      yuukaGreetingNode = document.createElement("section");
+      yuukaGreetingNode.id = "codex-yuuka-home-greeting";
+      yuukaGreetingNode.setAttribute("data-yuuka-owned", "greeting");
+      const halo = document.createElement("span");
+      halo.setAttribute("data-yuuka-halo", "");
+      halo.setAttribute("aria-hidden", "true");
+      const title = document.createElement("h1");
+      yuukaGreetingTitle = title;
+      // Some versions put the icon inside game-source; others keep it as a
+      // separate sibling. Reuse that visible native anchor whenever possible.
+      if (exactHero.contains?.(selectorNodes("home-icon")[0])) yuukaGreetingNode.appendChild(halo);
+      yuukaGreetingNode.appendChild(title);
+      exactHero.parentElement.appendChild(yuukaGreetingNode);
+    }
+    // The project name belongs to the native project button, never the full
+    // question (which also contains localized prose). textContent stays text.
+    const projectButton = exactHero.querySelector?.('button');
+    const projectName = String(projectButton?.textContent || "").replace(/\s+/g, " ").trim();
+    const greetingText = projectName
+      ? `老师，一起推进「${projectName}」吧`
+      : THEME.appearance === "dark"
+        ? "老师，剩下的工作，我们一起完成吧。"
+        : "老师，今天也一起加油吧。";
+    if (yuukaGreetingTitle.textContent !== greetingText) yuukaGreetingTitle.textContent = greetingText;
+    return yuukaGreetingNode;
+  };
   const refreshParts = () => {
     metrics.partPasses += 1;
+    syncYuukaSidebar();
     const desired = new Map();
     addPart(desired, "root", [document.documentElement]);
     addPart(desired, "sidebar", [
@@ -876,7 +1051,8 @@
     addPart(desired, "dialog", selectorNodes("overlay-dialog"));
     const homeHero = selectorNodes("game-source")[0] ??
       selectorNodes("home-icon")[0]?.parentElement;
-    addPart(desired, "home-hero", homeHero ? [homeHero] : []);
+    const themedHero = syncYuukaGreeting(homeHero);
+    addPart(desired, "home-hero", themedHero ? [themedHero] : []);
 
     for (const node of partNodes) {
       if (!desired.has(node)) {
@@ -896,6 +1072,8 @@
   };
 
   const removeParts = () => {
+    clearYuukaGreeting();
+    clearYuukaSidebar();
     for (const node of [...composerBorderRestores.keys()]) restoreComposerBorders(node);
     for (const node of partNodes) node.removeAttribute?.(PART_ATTR);
     partNodes.clear();
@@ -980,11 +1158,21 @@
   const writeHomePreset = (prompt) => {
     const composerRootSelector = selectorByKey.get("composer-chrome")?.selector ||
       ".composer-surface-chrome";
-    const editor = document.querySelector(
+    const editor = [...document.querySelectorAll(
       `${composerRootSelector} .ProseMirror[contenteditable="true"], ` +
-        `${composerRootSelector} [contenteditable="true"]`,
-    );
+        `${composerRootSelector} [contenteditable="true"], ${composerRootSelector} textarea`,
+    )].find(node => node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0)
+      || (isYuukaTheme ? genericInputNodes().find(node =>
+      resolvedMainNode()?.contains(node) && node.getBoundingClientRect().width > 0) : null);
     if (!editor) return false;
+    if (editor.tagName === "TEXTAREA") {
+      editor.focus?.();
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value")?.set;
+      if (!setter) return false;
+      setter.call(editor, prompt);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      return true;
+    }
     let inserted = false;
     try {
       editor.focus?.();
@@ -1017,9 +1205,130 @@
     return true;
   };
 
+  const yuukaPlanStore = createYuukaPlanStore(() => window.localStorage,
+    () => window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const yuukaMemos = [
+    "老师，今天也要认真核对，每一份努力的价值。",
+    "计划我已经整理好了。接下来的工作……就一起完成吧，老师。",
+    "再忙也要留一点时间休息。这、这也是为了提高效率。",
+    "不必一次完成所有事。先做好眼前这一项，我会陪着老师。",
+    "今天的努力，我都有记下来。老师，辛苦了。",
+    "偶尔依靠我也没关系。毕竟，老师的计划也需要有人帮忙核算嘛。",
+  ];
+  let yuukaMemoIndex = Math.floor(Date.now() / 86400000) % yuukaMemos.length;
+  let yuukaWorkdesk = null;
+  let yuukaPlanDraft = "";
+  const clearYuukaWorkdesk = () => {
+    const input = yuukaWorkdesk?.querySelector('.yuuka-plan-form input');
+    if (input) yuukaPlanDraft = input.value;
+    yuukaWorkdesk?.remove();
+    yuukaWorkdesk = null;
+  };
+  const renderYuukaPlan = (result, saved = false) => {
+    if (!yuukaWorkdesk) return;
+    const list = yuukaWorkdesk.querySelector('.yuuka-plan-list');
+    const active = document.activeElement;
+    const focusedId = list.contains(active) ? active.closest('[data-yuuka-plan-id]')?.getAttribute('data-yuuka-plan-id') : null;
+    const focusDelete = active?.classList?.contains('yuuka-plan-delete');
+    const scrollTop = list.scrollTop;
+    const nodes = result.items.map(item => {
+      const row = document.createElement('li');
+      row.className = 'yuuka-plan-item';
+      row.setAttribute('data-yuuka-plan-id', item.id);
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = item.done;
+      const text = document.createElement('span');
+      text.className = 'yuuka-plan-text';
+      text.textContent = item.text;
+      label.append(checkbox, text);
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'yuuka-plan-delete';
+      remove.textContent = '删除';
+      remove.setAttribute('aria-label', `删除计划：${item.text}`);
+      row.append(label, remove);
+      return row;
+    });
+    list.replaceChildren(...nodes);
+    list.scrollTop = scrollTop;
+    if (focusedId) {
+      const row = [...list.children].find(node => node.getAttribute('data-yuuka-plan-id') === focusedId);
+      (row?.querySelector(focusDelete ? 'button' : 'input') || yuukaWorkdesk.querySelector('.yuuka-plan-form input')).focus({ preventScroll: true });
+    }
+    yuukaWorkdesk.querySelector('.yuuka-plan-empty').hidden = Boolean(result.items.length || result.error);
+    yuukaWorkdesk.querySelector('.yuuka-plan-count').textContent = `${result.items.filter(item => item.done).length} / ${result.items.length}`;
+    const status = yuukaWorkdesk.querySelector('.yuuka-plan-status');
+    status.textContent = result.error || (saved ? '已保存到本机 · 重启后保留' : '保存在本机 · 重启后保留');
+    status.setAttribute('data-error', String(Boolean(result.error)));
+  };
+  const syncYuukaWorkdesk = (deck) => {
+    if (!isYuukaTheme || !deck?.parentElement || !yuukaGreetingNode?.isConnected) {
+      clearYuukaWorkdesk();
+      return;
+    }
+    if (!yuukaWorkdesk?.isConnected) {
+      clearYuukaWorkdesk();
+      yuukaWorkdesk = document.createElement('section');
+      yuukaWorkdesk.id = 'codex-yuuka-workdesk';
+      yuukaWorkdesk.setAttribute('data-yuuka-owned', 'workdesk');
+      yuukaWorkdesk.setAttribute('aria-label', '优香工作台');
+      // Only constant UI markup goes through innerHTML. Plan text is always textContent.
+      yuukaWorkdesk.innerHTML = `<div class="yuuka-workdesk-grid">
+        <section class="yuuka-memo" aria-labelledby="yuuka-memo-title">
+          <header><span class="yuuka-desk-kicker">YUUKA’S MEMO</span><h2 id="yuuka-memo-title">优香寄语</h2></header>
+          <div class="yuuka-memo-copy"><p aria-live="polite"></p></div><button type="button" class="yuuka-memo-refresh">换一句</button>
+        </section>
+        <section class="yuuka-plan" aria-labelledby="yuuka-plan-title">
+          <header><span class="yuuka-desk-kicker">DAILY PLAN</span><h2 id="yuuka-plan-title">今日计划</h2><span class="yuuka-plan-count" aria-label="已完成 / 总数"></span></header>
+          <form class="yuuka-plan-form"><input type="text" maxlength="120" aria-label="新计划" placeholder="写下今天的一件小目标…" autocomplete="off"><button type="submit">添加</button></form>
+          <ul class="yuuka-plan-list" aria-label="计划清单"></ul><p class="yuuka-plan-empty">还没有计划，从一件小事开始吧，老师。</p>
+          <p class="yuuka-plan-status" role="status" aria-live="polite"></p>
+        </section></div>`;
+      yuukaWorkdesk.querySelector('.yuuka-memo-copy p').textContent = yuukaMemos[yuukaMemoIndex];
+      yuukaWorkdesk.querySelector('.yuuka-memo-refresh').addEventListener('click', () => {
+        yuukaMemoIndex = (yuukaMemoIndex + 1) % yuukaMemos.length;
+        yuukaWorkdesk.querySelector('.yuuka-memo-copy p').textContent = yuukaMemos[yuukaMemoIndex];
+      });
+      const input = yuukaWorkdesk.querySelector('.yuuka-plan-form input');
+      input.value = yuukaPlanDraft;
+      // Enter belongs to this checklist, never the native chat composer.
+      input.addEventListener('keydown', event => event.stopPropagation());
+      input.addEventListener('keyup', event => event.stopPropagation());
+      yuukaWorkdesk.querySelector('form').addEventListener('submit', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!input.value.trim()) { input.focus(); return; }
+        const result = yuukaPlanStore.change('add', input.value);
+        if (!result.error) { input.value = ''; yuukaPlanDraft = ''; }
+        renderYuukaPlan(result, true);
+        input.focus();
+      });
+      const list = yuukaWorkdesk.querySelector('.yuuka-plan-list');
+      list.addEventListener('change', event => {
+        if (!event.target.matches('input[type="checkbox"]')) return;
+        const id = event.target.closest('[data-yuuka-plan-id]').getAttribute('data-yuuka-plan-id');
+        renderYuukaPlan(yuukaPlanStore.change('done', { id, done: event.target.checked }), true);
+      });
+      list.addEventListener('click', event => {
+        const button = event.target.closest('.yuuka-plan-delete');
+        if (!button) return;
+        const id = button.closest('[data-yuuka-plan-id]').getAttribute('data-yuuka-plan-id');
+        renderYuukaPlan(yuukaPlanStore.change('remove', id), true);
+      });
+      renderYuukaPlan(yuukaPlanStore.read());
+    }
+    if (deck.nextSibling !== yuukaWorkdesk) deck.parentElement.insertBefore(yuukaWorkdesk, deck.nextSibling);
+  };
+  const yuukaStorageHandler = event => {
+    if (event.key === YUUKA_PLAN_KEY || event.key === null) renderYuukaPlan(yuukaPlanStore.read());
+  };
+  if (isYuukaTheme) window.addEventListener?.('storage', yuukaStorageHandler);
+
   const syncHomeDeck = () => {
     let deck = document.getElementById(HOME_DECK_ID);
-    if (!isInternetAngelTheme) {
+    if (!isInternetAngelTheme && !isYuukaTheme) {
       deck?.remove?.();
       return null;
     }
@@ -1029,6 +1338,53 @@
     if (!home || typeof home.appendChild !== "function") {
       deck?.remove?.();
       return null;
+    }
+    if (isYuukaTheme) {
+      if (deck && home.contains(deck)) {
+        // The native greeting can mount after the first home scan. Reattach
+        // an already-created deck once the centered welcome anchor exists.
+        const greeting = home.querySelector('#codex-yuuka-home-greeting');
+        if (greeting?.parentElement && (deck.parentElement !== greeting.parentElement || greeting.nextSibling !== deck)) {
+          greeting.parentElement.insertBefore(deck, greeting.nextSibling);
+        }
+        return deck;
+      }
+      deck?.remove?.();
+      deck = document.createElement("section");
+      deck.id = HOME_DECK_ID;
+      deck.className = "yuuka-task-deck";
+      deck.setAttribute("aria-label", "夏莱任务委托");
+      const heading = document.createElement("div");
+      heading.className = "yuuka-task-heading";
+      heading.setAttribute("aria-hidden", "true");
+      heading.innerHTML = '<span>◇ 夏莱 · 任务委托</span><span>SEMINAR SUPPORT</span>';
+      deck.appendChild(heading);
+      const icons = [
+        '<ellipse cx="12" cy="4" rx="6" ry="2"/><path d="M12 7v14M5 11l7-4 7 4-7 10-7-10Z"/><path d="M3 13h18M8 9l4 8 4-8"/>',
+        '<path d="M3 5h12L8 19l-3-3 5-8H6ZM17 5h4v3l-7 11-3-3 6-9h-3l-7 12" stroke="none" fill="currentColor"/><path d="M3 22h18" opacity=".5"/>',
+        '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 5h8v4H8z" fill="currentColor" fill-opacity=".18"/><path d="M8 13h1m3 0h1m3 0h1M8 17h1m3 0h1m3-1v4"/>',
+        '<path d="m12 2 9 4v6c0 5-9 10-9 10S3 17 3 12V6l9-4Z" fill="currentColor" fill-opacity=".10"/><path d="m14 6-5 7h4l-3 6 7-9h-5l2-4Z" fill="currentColor" stroke="none"/>',
+      ];
+      const titles = ["夏莱调查", "千年工坊", "优香核算", "应急支援"];
+      const descriptions = ["探索代码与项目结构", "构建功能、应用或工具", "审查代码与改进建议", "定位错误并修复问题"];
+      const agencies = ["SCHALE", "MILLENNIUM", "SEMINAR", "SUPPORT"];
+      const actions = ["探索代码", "构建功能", "审查代码", "修复问题"];
+      for (const [index, preset] of homePresets.entries()) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "yuuka-task-card";
+        button.setAttribute("data-yuuka-mission", String(index));
+        button.setAttribute("aria-label", `${titles[index]}：${descriptions[index]}`);
+        button.innerHTML = `<span class="yuuka-task-channel" aria-hidden="true">${agencies[index]}<b>0${index + 1}</b></span><span class="yuuka-task-sigil" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">${icons[index]}</svg></span><span class="yuuka-task-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${icons[index]}</svg><i>◆</i></span><span class="yuuka-task-copy"><strong>${titles[index]}</strong><small>${descriptions[index]}</small></span><span class="yuuka-task-footer" aria-hidden="true"><span>${actions[index]}</span><b>›</b></span>`;
+        button.addEventListener("click", () => writeHomePreset(preset.prompt));
+        deck.appendChild(button);
+      }
+      // Keep native suggestions/repository controls intact. The task cards
+      // belong to the centered welcome area, not the bottom composer slot.
+      const greeting = home.querySelector('#codex-yuuka-home-greeting');
+      if (greeting?.parentElement) greeting.parentElement.insertBefore(deck, greeting.nextSibling);
+      else home.appendChild(deck);
+      return deck;
     }
     if (deck?.parentElement === home) return deck;
     deck?.remove?.();
@@ -1074,7 +1430,7 @@
     if (!isInternetAngelTheme) {
       sidebarOrnaments?.remove?.();
       homeHud?.remove?.();
-      syncHomeDeck();
+      syncYuukaWorkdesk(syncHomeDeck());
       return;
     }
 
@@ -1161,6 +1517,8 @@
       }
     }
     removeParts();
+    clearYuukaWorkdesk();
+    if (isYuukaTheme) window.removeEventListener?.('storage', yuukaStorageHandler);
     predicateCache.cleanup();
     state?.rootObserver?.disconnect();
     state?.partObserver?.disconnect();

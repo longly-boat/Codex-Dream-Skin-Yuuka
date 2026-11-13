@@ -1,9 +1,10 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [switch]$Enable,
   [switch]$Disable,
   [switch]$Status,
-  [switch]$ProtectCurrentSession
+  [switch]$ProtectCurrentSession,
+  [switch]$TakeOverStartupSession
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,15 +18,19 @@ if ($ProtectCurrentSession -and -not $Enable) {
   throw '-ProtectCurrentSession is valid only with -Enable.'
 }
 
-$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
 $AutoLaunchScript = Join-Path $PSScriptRoot 'auto-launch-dream-skin.ps1'
 $AutoLaunchState = Join-Path $StateRoot 'auto-launch-state.json'
 $StopMarker = Join-Path $StateRoot 'auto-launch.stop'
 $StartupDirectory = [Environment]::GetFolderPath('Startup')
-$StartupShortcut = Join-Path $StartupDirectory 'Codex Dream Skin Auto Launch.lnk'
+$StartupShortcut = Join-Path $StartupDirectory 'Codex Dream Skin Yuuka Auto Launch.lnk'
 $PowerShellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
-$StartupArguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy RemoteSigned -File ' +
+$LegacyStartupArguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy RemoteSigned -File ' +
   (ConvertTo-DreamSkinProcessArgument -Value $AutoLaunchScript)
+$PreviousStartupArguments = $LegacyStartupArguments + ' -TakeOverStartupSession'
+$HiddenLauncher = Join-Path $PSScriptRoot 'auto-launch-hidden.exe'
+$HiddenLauncherSource = Join-Path $PSScriptRoot 'auto-launch-hidden.cs'
+$StartupArguments = ''
 
 function Assert-DreamSkinAutoLaunchControlFile {
   param([Parameter(Mandatory = $true)][string]$Path)
@@ -55,9 +60,25 @@ function Get-DreamSkinManagedAutoLaunchShortcut {
 function Test-DreamSkinManagedAutoLaunchShortcut {
   $shortcut = Get-DreamSkinManagedAutoLaunchShortcut
   if ($null -eq $shortcut) { return $false }
-  return (Test-DreamSkinPathEqual -Left $shortcut.TargetPath -Right $PowerShellPath) -and
-    $shortcut.Arguments -ceq $StartupArguments -and
+  $legacy = (Test-DreamSkinPathEqual -Left $shortcut.TargetPath -Right $PowerShellPath) -and
+    ($shortcut.Arguments -ceq $PreviousStartupArguments -or $shortcut.Arguments -ceq $LegacyStartupArguments)
+  $hidden = (Test-DreamSkinPathEqual -Left $shortcut.TargetPath -Right $HiddenLauncher) -and
+    $shortcut.Arguments -ceq $StartupArguments
+  return ($legacy -or $hidden) -and
     (Test-DreamSkinPathEqual -Left $shortcut.WorkingDirectory -Right (Split-Path -Parent $PSScriptRoot))
+}
+
+function Initialize-DreamSkinHiddenAutoLauncher {
+  Assert-DreamSkinAutoLaunchControlFile -Path $HiddenLauncherSource
+  Assert-DreamSkinAutoLaunchControlFile -Path $HiddenLauncher
+  $staged = Join-Path $PSScriptRoot ('auto-launch-hidden.' + [guid]::NewGuid().ToString('N') + '.exe')
+  try {
+    Add-Type -TypeDefinition ([IO.File]::ReadAllText($HiddenLauncherSource)) `
+      -OutputAssembly $staged -OutputType WindowsApplication -ErrorAction Stop
+    Move-Item -LiteralPath $staged -Destination $HiddenLauncher -Force
+  } finally {
+    Remove-Item -LiteralPath $staged -Force -ErrorAction SilentlyContinue
+  }
 }
 
 function Write-DreamSkinManagedAutoLaunchShortcut {
@@ -74,16 +95,16 @@ function Write-DreamSkinManagedAutoLaunchShortcut {
   }
 
   $temporaryShortcut = Join-Path $StartupDirectory (
-    '.Codex Dream Skin Auto Launch.' + [guid]::NewGuid().ToString('N') + '.lnk'
+    '.Codex Dream Skin Yuuka Auto Launch.' + [guid]::NewGuid().ToString('N') + '.lnk'
   )
   $shell = New-Object -ComObject WScript.Shell
   try {
     $shortcut = $shell.CreateShortcut($temporaryShortcut)
-    $shortcut.TargetPath = $PowerShellPath
+    $shortcut.TargetPath = $HiddenLauncher
     $shortcut.Arguments = $StartupArguments
     $shortcut.WorkingDirectory = Split-Path -Parent $PSScriptRoot
     $shortcut.Description = 'Automatically restart a newly opened official Codex session with Dream Skin'
-    $icon = Join-Path (Split-Path -Parent $PSScriptRoot) 'assets\internet-angel-tray.ico'
+    $icon = Join-Path (Split-Path -Parent $PSScriptRoot) 'assets\yuuka-tray.ico'
     if (Test-Path -LiteralPath $icon -PathType Leaf) { $shortcut.IconLocation = "$icon,0" }
     $shortcut.Save()
   } finally {
@@ -94,7 +115,7 @@ function Write-DreamSkinManagedAutoLaunchShortcut {
     $probeShell = New-Object -ComObject WScript.Shell
     try {
       $probe = $probeShell.CreateShortcut($temporaryShortcut)
-      if (-not (Test-DreamSkinPathEqual -Left "$($probe.TargetPath)" -Right $PowerShellPath) -or
+      if (-not (Test-DreamSkinPathEqual -Left "$($probe.TargetPath)" -Right $HiddenLauncher) -or
         "$($probe.Arguments)" -cne $StartupArguments) {
         throw 'The staged automatic-launch shortcut failed target verification.'
       }
@@ -220,6 +241,7 @@ $shortcutWasManaged = Test-DreamSkinManagedAutoLaunchShortcut
 $stopMarkerWasPresent = Test-Path -LiteralPath $StopMarker -PathType Leaf
 $watcherLaunchAttempted = $false
 try {
+  Initialize-DreamSkinHiddenAutoLauncher
   Remove-Item -LiteralPath $StopMarker -Force -ErrorAction SilentlyContinue
   Write-DreamSkinManagedAutoLaunchShortcut
   $current = Get-DreamSkinAutoLaunchStatus
@@ -231,8 +253,16 @@ try {
     $arguments = '-NoProfile -WindowStyle Hidden -ExecutionPolicy RemoteSigned -File ' +
       (ConvertTo-DreamSkinProcessArgument -Value $AutoLaunchScript)
     if ($ProtectCurrentSession) { $arguments += ' -ProtectCurrentSession' }
+    if ($TakeOverStartupSession) { $arguments += ' -TakeOverStartupSession' }
     $watcherLaunchAttempted = $true
-    Start-Process -FilePath $PowerShellPath -ArgumentList $arguments -WindowStyle Hidden | Out-Null
+    $launchInfo = New-Object Diagnostics.ProcessStartInfo
+    $launchInfo.FileName = $PowerShellPath
+    $launchInfo.Arguments = $arguments
+    $launchInfo.UseShellExecute = $false
+    $launchInfo.CreateNoWindow = $true
+    $launchInfo.WindowStyle = [Diagnostics.ProcessWindowStyle]::Hidden
+    $monitor = [Diagnostics.Process]::Start($launchInfo)
+    if ($null -ne $monitor) { $monitor.Dispose() }
 
     $deadline = [DateTime]::UtcNow.AddSeconds(10)
     do {

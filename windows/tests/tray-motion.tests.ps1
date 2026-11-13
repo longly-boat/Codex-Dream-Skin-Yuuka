@@ -47,7 +47,7 @@ $script:launchedChildren = 0
 $trayRestingIcon = [System.Drawing.SystemIcons]::Application
 $script:trayBusyIcon = $null
 $script:trayOperationFeedbackReady = $true
-$notify = [pscustomobject]@{ Text = 'Codex Dream Skin'; Icon = $trayRestingIcon }
+$notify = [pscustomobject]@{ Text = 'Codex Dream Skin Yuuka'; Icon = $trayRestingIcon }
 $trayActivityTimer = [pscustomobject]@{ Starts = 0; Stops = 0 }
 $trayActivityTimer | Add-Member -MemberType ScriptMethod -Name Start -Value { $this.Starts += 1 }
 $trayActivityTimer | Add-Member -MemberType ScriptMethod -Name Stop -Value { $this.Stops += 1 }
@@ -180,7 +180,7 @@ try {
   $child.HasExited = $true
   Update-DreamSkinTrayOperationState
   if ($script:trayThemeBusy -or -not $operationItem.Enabled -or $script:trayBusyItem.Visible -or
-    -not $child.Disposed -or $notify.Text -cne 'Codex Dream Skin' -or $trayActivityTimer.Stops -lt 1 -or
+    -not $child.Disposed -or $notify.Text -cne 'Codex Dream Skin Yuuka' -or $trayActivityTimer.Stops -lt 1 -or
     -not [object]::ReferenceEquals($notify.Icon, $trayRestingIcon)) {
     throw 'Exited theme children retained busy state, handles, or fabricated a success tooltip.'
   }

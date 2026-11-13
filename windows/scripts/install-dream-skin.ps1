@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [int]$Port = 9335,
   [switch]$NoShortcuts
@@ -9,6 +9,7 @@ $PortExplicit = $PSBoundParameters.ContainsKey('Port')
 $SkillRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $PSScriptRoot 'common-windows.ps1')
 . (Join-Path $PSScriptRoot 'theme-windows.ps1')
+. (Join-Path $PSScriptRoot 'yuuka-migration.ps1')
 
 $operationLock = Enter-DreamSkinOperationLock
 try {
@@ -24,7 +25,9 @@ try {
     }
   }
 
-  $StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+  $StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
+  Assert-YuukaLegacyEngineInactive
+  $null = Import-YuukaLegacyPreferences -LegacyRoot (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin') -StateRoot $StateRoot
   $themePaths = Get-DreamSkinThemePaths -StateRoot $StateRoot
   Ensure-DreamSkinManagedDirectory -Path $themePaths.Root -Root $themePaths.Root
   $StatePath = Join-Path $StateRoot 'state.json'
@@ -36,7 +39,7 @@ try {
     throw 'The saved Codex path is still running but no longer matches a registered Store package. Close it manually before installing.'
   }
   if (Test-DreamSkinTrayActive) {
-    throw 'Exit the Codex Dream Skin tray before reinstalling so every shortcut can move to the new runtime safely.'
+    throw 'Exit the Codex Dream Skin Yuuka tray before reinstalling so every shortcut can move to the new runtime safely.'
   }
   $configPaths = Resolve-DreamSkinConfigPaths -StateRoot $StateRoot -BindBackup
   $engine = Install-DreamSkinRuntimeEngine -SkillRoot $SkillRoot -StateRoot $StateRoot
@@ -56,23 +59,23 @@ try {
     $startScript = $engine.Start
     $restoreScript = $engine.Restore
     $trayScript = $engine.Tray
-    $shortcutIcon = Join-Path $engine.Root 'assets\internet-angel-tray.ico'
+    $shortcutIcon = Join-Path $engine.Root 'assets\yuuka-tray.ico'
     if (-not (Test-Path -LiteralPath $shortcutIcon -PathType Leaf)) {
-      throw 'The managed Internet Angel shortcut icon is missing.'
+      throw 'The managed Yuuka shortcut icon is missing.'
     }
     $portArgument = if ($PortExplicit) { " -Port $Port" } else { '' }
 
     foreach ($folder in @($desktop, $startMenu)) {
-      $shortcut = $shell.CreateShortcut((Join-Path $folder 'Codex Dream Skin.lnk'))
+      $shortcut = $shell.CreateShortcut((Join-Path $folder 'Codex Dream Skin Yuuka.lnk'))
       $shortcut.TargetPath = $powershell
       $shortcut.Arguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy RemoteSigned -File `"$trayScript`"$portArgument -ShowWindow"
       $shortcut.WorkingDirectory = $engine.Root
-      $shortcut.Description = 'Open Codex Dream Skin themes and apply a verified theme'
+      $shortcut.Description = 'Open Codex Dream Skin Yuuka themes and apply a verified theme'
       $shortcut.IconLocation = "$shortcutIcon,0"
       $shortcut.Save()
     }
 
-    $restore = $shell.CreateShortcut((Join-Path $desktop 'Codex Dream Skin - Restore.lnk'))
+    $restore = $shell.CreateShortcut((Join-Path $desktop 'Codex Dream Skin Yuuka - Restore.lnk'))
     $restore.TargetPath = $powershell
     $restore.Arguments = "-NoProfile -ExecutionPolicy RemoteSigned -File `"$restoreScript`"$portArgument -RestoreBaseTheme -PromptRestart"
     $restore.WorkingDirectory = $engine.Root
@@ -81,11 +84,11 @@ try {
     $restore.Save()
 
     foreach ($folder in @($desktop, $startMenu)) {
-      $tray = $shell.CreateShortcut((Join-Path $folder 'Codex Dream Skin - Tray.lnk'))
+      $tray = $shell.CreateShortcut((Join-Path $folder 'Codex Dream Skin Yuuka - Tray.lnk'))
       $tray.TargetPath = $powershell
       $tray.Arguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy RemoteSigned -File `"$trayScript`"$portArgument"
       $tray.WorkingDirectory = $engine.Root
-      $tray.Description = 'Open Codex Dream Skin status and theme controls in the system tray'
+      $tray.Description = 'Open Codex Dream Skin Yuuka status and theme controls in the system tray'
       $tray.IconLocation = "$shortcutIcon,0"
       $tray.Save()
     }
@@ -95,9 +98,9 @@ try {
   }
 
   if ($NoShortcuts) {
-    Write-Host "Codex Dream Skin base theme installed at $($engine.Root). Run $($engine.Start) to launch it."
+    Write-Host "Codex Dream Skin Yuuka base theme installed at $($engine.Root). Run $($engine.Start) to launch it."
   } else {
-    Write-Host 'Codex Dream Skin installed. The launch shortcut asks before restarting an open Codex window.'
+    Write-Host 'Codex Dream Skin Yuuka installed. The launch shortcut asks before restarting an open Codex window.'
   }
 } finally {
   Exit-DreamSkinOperationLock -Mutex $operationLock

@@ -21,16 +21,21 @@ $versionPath = Join-Path $windowsRoot 'VERSION'
 $macosVersionPath = Join-Path (Join-Path $repositoryRoot 'macos') 'VERSION'
 $macosPackagePath = Join-Path (Join-Path $repositoryRoot 'macos') 'package.json'
 $licensePath = Join-Path (Join-Path $repositoryRoot 'macos') 'LICENSE'
-$noticePath = Join-Path (Join-Path $repositoryRoot 'macos') 'NOTICE.md'
+$noticePath = Join-Path $windowsRoot 'NOTICE.md'
 $innoLanguageRoot = Join-Path $installerRoot 'languages'
 $innoChineseLanguagePath = Join-Path $innoLanguageRoot 'ChineseSimplified.isl'
 $innoSetupLicensePath = Join-Path $innoLanguageRoot 'Inno-Setup-License.txt'
 $innoChineseLanguageSha256 = '7d544b9bb1d142cfa11f2e5d3cc8abe2e55f8e066c5124e3772675aa236e1278'
 $innoSetupLicenseSha256 = '0c81595601bce47eeef8d865d5da7f9ca2c6a12235b7482b29f5ab23ed02ee5a'
-$defaultThemeImagePath = Join-Path $windowsRoot 'assets\dream-reference.jpg'
+$defaultThemeImagePath = Join-Path $windowsRoot 'assets\background.png'
 $defaultThemePath = Join-Path $windowsRoot 'assets\theme.json'
-$defaultThemeImageSha256 = '4858200d0c5714091d3d15cfa6a07f237b543e1c07d02c599be3fc11353b72c3'
-$defaultThemeSha256 = 'e7f18ca3e535da6e5e4a9c81c48aef3d2e2f7c58eb3d0c4fd4c4b09ed2b96384'
+$defaultThemeCssPath = Join-Path $windowsRoot 'assets\theme.css'
+$defaultThemeImageSha256 = '8d4c2008c9f7e7a5d74cd7593e89cfe8ab096f72cefd640420f3543016dfb75a'
+$defaultThemeSha256 = '9e073468cc16c28487031440a0259668989f56e375368a35f45b64fa56ccb4af'
+$defaultThemeCssSha256 = '92a84a7415b4ec25eec4209f70110c4283c725324ad856012f130593ca1e09d5'
+$nightThemeSha256 = '31bdc668fbce3c3ba21c9f100a30b312d5a1b6d99031d97ab23d20af46b7cf55'
+$yuukaIconSha256 = '79990db5af5cc3413081ba4ccead8de2e95d711ce7c77fea7a3e25ad3bf1dccf'
+$yuukaPngSha256 = '758676af5a8a2c04ad8f4484d8e45487d31fa8f5f8bf9d7c9116ebe14b8af6d8'
 
 function Read-ReleaseTextFile {
   param([Parameter(Mandatory = $true)][string]$Path)
@@ -110,13 +115,15 @@ function Resolve-IsccExecutable {
 function Copy-ReleaseDirectory {
   param(
     [Parameter(Mandatory = $true)][string]$Source,
-    [Parameter(Mandatory = $true)][string]$Destination
+    [Parameter(Mandatory = $true)][string]$Destination,
+    [string[]]$ExcludedNames = @()
   )
   if (-not (Test-Path -LiteralPath $Source -PathType Container)) {
     throw "Required release directory does not exist: $Source"
   }
   New-Item -ItemType Directory -Path $Destination -Force | Out-Null
   foreach ($item in Get-ChildItem -LiteralPath $Source -Force) {
+    if ($item.Name -in $ExcludedNames) { continue }
     Copy-Item -LiteralPath $item.FullName -Destination $Destination -Recurse -Force -ErrorAction Stop
   }
 }
@@ -150,20 +157,20 @@ function Copy-ZipEntry {
 function Write-DreamSkinIcon {
   param(
     [Parameter(Mandatory = $true)][string]$Path,
-    [string]$SourcePath = (Join-Path $windowsRoot 'assets\internet-angel-tray.ico')
+    [string]$SourcePath = (Join-Path $windowsRoot 'assets\yuuka-tray.ico')
   )
   if (-not (Test-Path -LiteralPath $SourcePath -PathType Leaf)) {
-    throw "Internet Angel application icon is missing: $SourcePath"
+    throw "Yuuka application icon is missing: $SourcePath"
   }
   $icon = [System.IO.File]::ReadAllBytes($SourcePath)
   if ($icon.Length -lt 22 -or
     [System.BitConverter]::ToUInt16($icon, 0) -ne 0 -or
     [System.BitConverter]::ToUInt16($icon, 2) -ne 1) {
-    throw 'Internet Angel application icon has an invalid ICO header.'
+    throw 'Yuuka application icon has an invalid ICO header.'
   }
   $count = [System.BitConverter]::ToUInt16($icon, 4)
   if ($count -lt 1 -or $icon.Length -lt 6 + (16 * $count)) {
-    throw 'Internet Angel application icon has an invalid ICO directory.'
+    throw 'Yuuka application icon has an invalid ICO directory.'
   }
   $seenSizes = @{}
   for ($index = 0; $index -lt $count; $index++) {
@@ -178,13 +185,13 @@ function Write-DreamSkinIcon {
       [System.BitConverter]::ToUInt16($icon, $entryOffset + 6) -ne 32 -or
       $imageLength -lt 8 -or $imageOffset -lt 6 + (16 * $count) -or
       [uint64]$imageOffset + [uint64]$imageLength -gt [uint64]$icon.Length) {
-      throw "Internet Angel application icon contains an invalid ${width}px frame."
+      throw "Yuuka application icon contains an invalid ${width}px frame."
     }
     $seenSizes["$width"] = $true
   }
   foreach ($requiredSize in @(16, 24, 32, 48, 64, 256)) {
     if (-not $seenSizes.ContainsKey("$requiredSize")) {
-      throw "Internet Angel application icon is missing its ${requiredSize}px frame."
+      throw "Yuuka application icon is missing its ${requiredSize}px frame."
     }
   }
   $parent = Split-Path -Parent $Path
@@ -219,24 +226,62 @@ if ($innoSetupLicenseHash -cne $innoSetupLicenseSha256) {
   throw "The pinned Inno Setup license changed. Expected $innoSetupLicenseSha256, found $innoSetupLicenseHash."
 }
 $defaultTheme = (Read-ReleaseTextFile -Path $defaultThemePath) | ConvertFrom-Json
-if ("$($defaultTheme.id)" -cne 'preset-internet-angel-default' -or
-  "$($defaultTheme.image)" -cne 'dream-reference.jpg') {
-  throw 'The default Internet Angel theme metadata is unexpected.'
+if ("$($defaultTheme.id)" -cne 'yuuka-seminar' -or
+  "$($defaultTheme.image)" -cne 'background.png' -or
+  "$($defaultTheme.appearance)" -cne 'light') {
+  throw 'The default Yuuka theme metadata is unexpected.'
 }
 $reviewedThemeFiles = @(
   @{
     Path = $defaultThemeImagePath
     ExpectedSha256 = $defaultThemeImageSha256
-    Label = 'default Internet Angel image'
+    Label = 'default Yuuka image'
     NormalizeText = $false
   },
   @{
     Path = $defaultThemePath
     ExpectedSha256 = $defaultThemeSha256
-    Label = 'default Internet Angel metadata'
+    Label = 'default Yuuka metadata'
     NormalizeText = $true
+  },
+  @{
+    Path = $defaultThemeCssPath
+    ExpectedSha256 = $defaultThemeCssSha256
+    Label = 'default Yuuka Safe CSS'
+    NormalizeText = $true
+  },
+  @{
+    Path = Join-Path $windowsRoot 'assets\yuuka-tray.ico'
+    ExpectedSha256 = $yuukaIconSha256
+    Label = 'Yuuka application icon'
+    NormalizeText = $false
+  },
+  @{
+    Path = Join-Path $windowsRoot 'assets\yuuka-tray.png'
+    ExpectedSha256 = $yuukaPngSha256
+    Label = 'Yuuka tray image'
+    NormalizeText = $false
   }
 )
+$reviewedPresets = @(
+  @{ Id = 'yuuka-seminar'; Appearance = 'light'; MetadataSha256 = $defaultThemeSha256 },
+  @{ Id = 'yuuka-seminar-night'; Appearance = 'dark'; MetadataSha256 = $nightThemeSha256 }
+)
+foreach ($preset in $reviewedPresets) {
+  $presetRoot = Join-Path (Join-Path $windowsRoot 'presets') $preset.Id
+  $presetThemePath = Join-Path $presetRoot 'theme.json'
+  $presetTheme = (Read-ReleaseTextFile -Path $presetThemePath) | ConvertFrom-Json
+  if ("$($presetTheme.id)" -cne $preset.Id -or
+    "$($presetTheme.image)" -cne 'background.png' -or
+    "$($presetTheme.appearance)" -cne $preset.Appearance) {
+    throw "The reviewed Yuuka preset metadata is unexpected: $($preset.Id)"
+  }
+  $reviewedThemeFiles += @(
+    @{ Path = $presetThemePath; ExpectedSha256 = $preset.MetadataSha256; Label = "$($preset.Id) metadata"; NormalizeText = $true },
+    @{ Path = Join-Path $presetRoot 'theme.css'; ExpectedSha256 = $defaultThemeCssSha256; Label = "$($preset.Id) Safe CSS"; NormalizeText = $true },
+    @{ Path = Join-Path $presetRoot 'background.png'; ExpectedSha256 = $defaultThemeImageSha256; Label = "$($preset.Id) image"; NormalizeText = $false }
+  )
+}
 foreach ($reviewedThemeFile in $reviewedThemeFiles) {
   $reviewedThemeHash = if ($reviewedThemeFile.NormalizeText) {
     Get-NormalizedReleaseTextSha256 -Path $reviewedThemeFile.Path
@@ -261,7 +306,7 @@ if ($WorkingDirectory) {
   New-Item -ItemType Directory -Path $WorkingDirectory | Out-Null
 } else {
   $WorkingDirectory = Join-Path ([System.IO.Path]::GetTempPath()) (
-    'codex-dream-skin-windows-release-' + [guid]::NewGuid().ToString('N')
+    'codex-dream-skin-yuuka-windows-release-' + [guid]::NewGuid().ToString('N')
   )
   New-Item -ItemType Directory -Path $WorkingDirectory | Out-Null
 }
@@ -296,8 +341,14 @@ try {
   $languageRoot = Join-Path $stageRoot 'languages'
   New-Item -ItemType Directory -Path $payloadRoot | Out-Null
   New-Item -ItemType Directory -Path $languageRoot | Out-Null
-  Copy-ReleaseDirectory -Source (Join-Path $windowsRoot 'assets') -Destination (Join-Path $payloadRoot 'assets')
-  Copy-ReleaseDirectory -Source (Join-Path $windowsRoot 'scripts') -Destination (Join-Path $payloadRoot 'scripts')
+  Copy-ReleaseDirectory -Source (Join-Path $windowsRoot 'assets') -Destination (Join-Path $payloadRoot 'assets') `
+    -ExcludedNames @('dream-reference.jpg', 'internet-angel-tray.ico', 'internet-angel-tray.png')
+  Copy-ReleaseDirectory -Source (Join-Path $windowsRoot 'scripts') -Destination (Join-Path $payloadRoot 'scripts') `
+    -ExcludedNames @('auto-launch-hidden.exe')
+  foreach ($preset in $reviewedPresets) {
+    Copy-ReleaseDirectory -Source (Join-Path (Join-Path $windowsRoot 'presets') $preset.Id) `
+      -Destination (Join-Path (Join-Path $payloadRoot 'presets') $preset.Id)
+  }
   [System.IO.File]::WriteAllText(
     (Join-Path $payloadRoot 'VERSION'),
     "$version`r`n",
@@ -321,18 +372,21 @@ try {
     $zip.Dispose()
   }
   Write-DreamSkinIcon -Path (Join-Path (Join-Path $payloadRoot 'assets') 'codex-dream-skin.ico') `
-    -SourcePath (Join-Path $windowsRoot 'assets\internet-angel-tray.ico')
+    -SourcePath (Join-Path $windowsRoot 'assets\yuuka-tray.ico')
 
   $expectedPayloadFiles = @(
     'VERSION',
-    'assets\dream-reference.jpg',
+    'assets\background.png',
+    'assets\theme.css',
     'assets\dream-skin.css',
     'assets\internet-angel-acrylic.css',
     'assets\internet-angel-extension.css',
     'assets\internet-angel-extension.js',
     'assets\css-predicate-cache.mjs',
-    'assets\internet-angel-tray.ico',
-    'assets\internet-angel-tray.png',
+    'assets\yuuka-tray.ico',
+    'assets\yuuka-tray.png',
+    'assets\yuuka-art.mjs',
+    'assets\yuuka-skin.css',
     'assets\renderer-inject.js',
     'assets\theme-motion.js',
     'assets\theme-motion.css',
@@ -347,9 +401,16 @@ try {
     'assets\retired-theme-catalog.json',
     'assets\theme.json',
     'assets\codex-dream-skin.ico',
+    'presets\yuuka-seminar\theme.json',
+    'presets\yuuka-seminar\theme.css',
+    'presets\yuuka-seminar\background.png',
+    'presets\yuuka-seminar-night\theme.json',
+    'presets\yuuka-seminar-night\theme.css',
+    'presets\yuuka-seminar-night\background.png',
     'scripts\apply-community-theme.ps1',
     'scripts\acrylic-window.ps1',
     'scripts\auto-launch-dream-skin.ps1',
+    'scripts\auto-launch-hidden.cs',
     'scripts\check-update.ps1',
     'scripts\common-windows.ps1',
     'scripts\config-utf8.ps1',
@@ -367,6 +428,7 @@ try {
     'assets\theme-manager\DreamSkin.ThemeManager.exe',
     'scripts\validate-safe-css-file.mjs',
     'scripts\verify-dream-skin.ps1',
+    'scripts\yuuka-migration.ps1',
     'runtime\node\node.exe',
     'runtime\node\LICENSE'
   )
@@ -375,19 +437,36 @@ try {
       throw "Staged installer payload is incomplete: $relative"
     }
   }
-  $stagedDefaultImage = Join-Path (Join-Path $payloadRoot 'assets') 'dream-reference.jpg'
+  $stagedDefaultImage = Join-Path (Join-Path $payloadRoot 'assets') 'background.png'
   $stagedDefaultImageHash = (Get-FileHash -LiteralPath $stagedDefaultImage -Algorithm SHA256).Hash.ToLowerInvariant()
   $stagedDefaultThemePath = Join-Path (Join-Path $payloadRoot 'assets') 'theme.json'
   $stagedDefaultThemeHash = Get-NormalizedReleaseTextSha256 -Path $stagedDefaultThemePath
+  $stagedDefaultThemeCssHash = Get-NormalizedReleaseTextSha256 -Path (Join-Path (Join-Path $payloadRoot 'assets') 'theme.css')
   $stagedDefaultTheme = (Read-ReleaseTextFile -Path $stagedDefaultThemePath) | ConvertFrom-Json
   if ($stagedDefaultImageHash -cne $defaultThemeImageSha256 -or
     $stagedDefaultThemeHash -cne $defaultThemeSha256 -or
-    "$($stagedDefaultTheme.id)" -cne 'preset-internet-angel-default' -or
-    "$($stagedDefaultTheme.image)" -cne 'dream-reference.jpg') {
-    throw 'Staged installer payload did not retain the reviewed Internet Angel JPEG theme.'
+    $stagedDefaultThemeCssHash -cne $defaultThemeCssSha256 -or
+    "$($stagedDefaultTheme.id)" -cne 'yuuka-seminar' -or
+    "$($stagedDefaultTheme.image)" -cne 'background.png') {
+    throw 'Staged installer payload did not retain the reviewed Yuuka PNG theme and Safe CSS.'
+  }
+  # Recheck every reviewed byte after staging, including both presets and icons.
+  foreach ($reviewedThemeFile in $reviewedThemeFiles) {
+    $relativePath = $reviewedThemeFile.Path.Substring($windowsRoot.Length + 1)
+    $stagedPath = Join-Path $payloadRoot $relativePath
+    $stagedHash = if ($reviewedThemeFile.NormalizeText) {
+      Get-NormalizedReleaseTextSha256 -Path $stagedPath
+    } else {
+      (Get-FileHash -LiteralPath $stagedPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    }
+    if ($stagedHash -cne $reviewedThemeFile.ExpectedSha256) {
+      throw "Staged reviewed theme asset changed: $relativePath"
+    }
   }
   foreach ($removedThemePath in @(
-    'presets', 'assets\codex-dream-skin-pixel-cafe.png', 'assets\theme-choten.json'
+    'assets\dream-reference.jpg', 'assets\internet-angel-tray.ico', 'assets\internet-angel-tray.png',
+    'scripts\auto-launch-hidden.exe',
+    'assets\codex-dream-skin-pixel-cafe.png', 'assets\theme-choten.json'
   )) {
     if (Test-Path -LiteralPath (Join-Path $payloadRoot $removedThemePath)) {
       throw "Installer payload contains a removed bundled theme: $removedThemePath"
@@ -400,11 +479,11 @@ try {
     "/DOutputDir=$OutputDirectory",
     $definitionPath
   )
-  Write-Host "Building CodexDreamSkin-Setup-v$version.exe..."
+  Write-Host "Building CodexDreamSkinYuuka-Setup-v$version.exe..."
   & $compiler @arguments
   if ($LASTEXITCODE -ne 0) { throw "ISCC.exe failed with exit code $LASTEXITCODE." }
 
-  $artifactPath = Join-Path $OutputDirectory "CodexDreamSkin-Setup-v$version.exe"
+  $artifactPath = Join-Path $OutputDirectory "CodexDreamSkinYuuka-Setup-v$version.exe"
   if (-not (Test-Path -LiteralPath $artifactPath -PathType Leaf)) {
     throw "Inno Setup did not create the expected artifact: $artifactPath"
   }

@@ -4,9 +4,12 @@
 
 ## 平台支持
 
+**Codex Dream Skin Yuuka v1.9.2 仅正式发行 Windows x64。** macOS 与 Linux 保留上游源码和检查，尚未完成优香品牌隔离与原生界面验收，不提供优香版 DMG 或 Linux 安装包。下表中继承平台的信息用于开发参考，不是当前支持承诺。
+
 | 项目 | Windows | macOS | Linux |
 | --- | --- | --- | --- |
-| 安装方式 | Setup.exe、源码脚本 | DMG、源码脚本 | 源码脚本、tar.gz 归档 |
+| 优香版状态 | Windows x64 首发 | 继承源码，未发行 | 继承源码，未发行 |
+| 安装方式 | Yuuka Setup.exe、源码脚本 | 上游 DMG / 源码构建流程 | 上游源码 / tar.gz 构建流程 |
 | 控制入口 | 系统托盘、原生主题管理器 | 菜单栏 App | shell 命令 |
 | Codex 来源 | Microsoft Store `OpenAI.Codex` | 官方 Codex App | 主要适配 AUR `openai-codex-desktop` |
 | 运行时 | Setup 内置 Node.js；源码需要 Node.js 22+ | 使用 Codex 内置 Node.js | Node.js 20+ |
@@ -14,23 +17,23 @@
 | 主题 ZIP 导入与透明度菜单 | 支持 | 支持 | — |
 | 动效设置与恢复 | 支持 | 支持 | 支持 |
 
-Windows 调试会话使用独立的受管 profile，首次使用时可能需要重新登录 Codex。Linux 可通过 `CODEX_APP_BIN` 指定自定义可执行文件路径。
+Windows 调试会话使用独立的受管 profile，首次使用时可能需要重新登录 Codex。默认主题为「优香 · 千年研讨会」，已保存主题还包含「优香 · 夜间核算」；本版不注册或接管 `dreamskin://` 协议，可通过主题管理器导入普通主题 ZIP。
 
-安装与平台命令：[Windows](../windows/README.md) · [macOS](../macos/README.md) · [Linux](../linux/README.md)。
+正式安装与迁移：[Windows 使用说明](../windows/README.md) · [安装指南](./install-windows.md)。继承平台开发参考：[macOS](../macos/README.md) · [Linux](../linux/README.md)；其中旧品牌、路径和发布入口属于上游实现，不能视为优香版安装说明。
 
 ## 默认路径
 
 | 平台 | 安装后引擎 | 用户数据与日志 |
 | --- | --- | --- |
-| Windows | `%LOCALAPPDATA%\CodexDreamSkin\engine` | `%LOCALAPPDATA%\CodexDreamSkin` |
-| macOS | `~/.codex/codex-dream-skin-studio` | `~/Library/Application Support/CodexDreamSkinStudio` |
-| Linux | `~/.codex/codex-dream-skin-linux` | `${XDG_STATE_HOME:-~/.local/state}/CodexDreamSkin` |
+| Windows 优香版 | `%LOCALAPPDATA%\CodexDreamSkinYuuka\engine` | `%LOCALAPPDATA%\CodexDreamSkinYuuka` |
+| macOS（继承源码） | `~/.codex/codex-dream-skin-studio` | `~/Library/Application Support/CodexDreamSkinStudio` |
+| Linux（继承源码） | `~/.codex/codex-dream-skin-linux` | `${XDG_STATE_HOME:-~/.local/state}/CodexDreamSkin` |
 
-Windows 的受管 profile 位于数据目录中的 `cdp-profile/`；macOS 和 Windows 的已保存主题位于各自数据目录中的 `themes/`。
+Windows 安装器与卸载器位于 `%LOCALAPPDATA%\Programs\CodexDreamSkinYuuka`，受管 profile 位于状态目录中的 `cdp-profile/`，已保存主题位于 `themes/`。原版状态目录 `%LOCALAPPDATA%\CodexDreamSkin` 独立保留；迁移前先停用原版自动接管并恢复外观，满足校验后仅复制缺失的优香主题与偏好，不覆盖新数据或复制登录资料。具体边界见 [Windows 迁移说明](../windows/README.md)。
 
 ## 共享运行时
 
-三端通过本机回环 CDP 向已验证的 Codex 界面加载样式和装饰层。`runtime/` 是共享源，平台脚本负责应用发现、启动、配置与恢复。
+共享架构通过本机回环 CDP 向已验证的 Codex 界面加载样式和装饰层。`runtime/` 是共享源，平台脚本负责应用发现、启动、配置与恢复；继承平台仍同步共享资产，避免后续移植时源码漂移。
 
 修改共享样式或脚本后，从仓库根目录同步资产：
 
@@ -57,7 +60,7 @@ node linux/scripts/injector.mjs --check-payload
 原生构建与测试使用对应平台环境：
 
 - Windows：PowerShell 5.1 / 7；源码安装前需使用 .NET SDK 8+ [构建主题管理器](../windows/theme-manager/README.md)。
-- macOS：`./macos/tests/run-tests.sh`；菜单栏 App 与 DMG 构建见 [macOS 说明](../macos/README.md)。
-- Linux：归档构建与桌面验证见 [Linux 说明](../linux/README.md)。
+- macOS（继承平台）：`./macos/tests/run-tests.sh`；菜单栏 App 与 DMG 构建见 [macOS 说明](../macos/README.md)，当前工作流只保留适用检查，不发行优香 DMG。
+- Linux（继承平台）：归档构建与桌面验证见 [Linux 说明](../linux/README.md)，当前不发行优香 Linux 安装包。
 
-发布步骤见[发布流程](./releases/README.md)，版本历史见[更新记录](../windows/CHANGELOG.md)。
+发布步骤见[发布流程](./releases/README.md)，版本历史见[更新记录](../windows/CHANGELOG.md)。当前正式资产仅为 `CodexDreamSkinYuuka-Setup-vX.Y.Z.exe` 与 `SHA256SUMS.txt`；继承平台测试通过不能替代本平台的原生安装和界面验收。

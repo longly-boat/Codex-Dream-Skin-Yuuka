@@ -1,5 +1,5 @@
 name: "Feature request / 功能建议"
-description: "Suggest an improvement for Codex Dream Skin / 为换肤工具提改进建议"
+description: "Suggest an improvement for Codex Dream Skin Yuuka / 为优香版换肤工具提改进建议"
 title: "[Feature]: "
 labels: ["enhancement", "needs-triage"]
 body:
@@ -9,17 +9,21 @@ body:
         Share an idea that fits this project’s scope: **external theming** for Codex Desktop via loopback CDP — not API relays, not patching the official app.
         欢迎提建议。本项目范围是：通过 **本机 CDP** 给 Codex 桌面端做 **外部换肤**，不包含中转配置、不修改官方安装包。
 
-        Please check [README](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/blob/main/README.md) and [CHANGELOG](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/blob/main/macos/CHANGELOG.md) first.
+        Please check [README](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/blob/main/README.md) and [CHANGELOG](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/blob/main/windows/CHANGELOG.md) first.
         提交前可先看 README 与 CHANGELOG，避免重复已有能力。
+
+        Yuuka v1.9.2 ships for Windows x64 only. macOS and Linux sources are inherited and not yet supported Yuuka releases.
+        优香 v1.9.2 仅发行 Windows x64；macOS 和 Linux 为继承源码，尚未作为优香版支持和发行。
 
   - type: dropdown
     id: platform
     attributes:
       label: Target platform / 目标平台
       options:
-        - macOS
         - Windows
-        - Both / 双平台
+        - Shared runtime / 共享运行时
+        - macOS port (not yet supported) / macOS 移植（暂未支持）
+        - Linux port (not yet supported) / Linux 移植（暂未支持）
         - Docs / repo only / 仅文档或仓库
         - Unsure / 不确定
     validations:
@@ -78,7 +82,7 @@ body:
       label: Scope check / 范围确认
       description: This helps filter out-of-scope requests / 帮助过滤超出项目范围的请求
       options:
-        - label: This is about theming / UX of Dream Skin, not API keys or model relays / 这是换肤或皮肤工具体验，不是 API / 中转配置
+        - label: This is about theming / UX of Dream Skin Yuuka, not API keys or model relays / 这是优香版换肤或工具体验，不是 API / 中转配置
           required: true
         - label: I am not asking to modify official Codex binaries / asar / 我不是在要求修改官方 Codex 二进制或 asar
           required: true

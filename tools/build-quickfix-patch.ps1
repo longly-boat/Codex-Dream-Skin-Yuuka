@@ -1,11 +1,11 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([string]$OutputDirectory)
 
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $windowsRoot = Join-Path $repositoryRoot 'windows'
 $version = ([System.IO.File]::ReadAllText((Join-Path $windowsRoot 'VERSION'))).Trim()
-$packageName = "CodexDreamSkin-QuickFix-v$version"
+$packageName = "CodexDreamSkinYuuka-QuickFix-v$version"
 $outputDirectory = if ($OutputDirectory) {
   [System.IO.Path]::GetFullPath($OutputDirectory)
 } else {
@@ -37,7 +37,7 @@ try {
     'theme-motion.js',
     'theme-motion.css',
     'motion-settings.mjs',
-    'motion-payload.mjs'
+    'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js'
   )) {
     Copy-Item -LiteralPath (Join-Path $windowsRoot "assets\$assetName") `
       -Destination (Join-Path $packageRoot "assets\$assetName") -Force
@@ -48,6 +48,8 @@ try {
     'injector.mjs',
     'patch-dream-skin.ps1',
     'start-dream-skin.ps1',
+    'auto-launch-dream-skin.ps1',
+    'tray-dream-skin.ps1',
     'theme-windows.ps1'
   )) {
     Copy-Item -LiteralPath (Join-Path $windowsRoot "scripts\$scriptName") `

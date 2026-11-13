@@ -4,13 +4,13 @@
   <a href="./CONTRIBUTING.md">中文</a> · <strong>English</strong>
 </p>
 
-Thanks for contributing to Codex Dream Skin. The project loads external themes into the official Codex desktop app through loopback CDP. macOS and Windows have separate install, injection, and restore paths, so choose the target platform before changing files.
+Thanks for contributing to Codex Dream Skin Yuuka. The project loads Yuuka themes into the official Codex desktop app through loopback CDP. v1.9.2 is this fork's first Windows x64 release. The macOS and Linux sources are inherited from upstream, have not completed native Yuuka acceptance testing, and have no Yuuka release packages. Identify whether your change affects Windows, the shared runtime, or an inherited platform before editing.
 
 ## Before you start
 
-1. Read the [project README](../README.en.md) and [platform reference](../docs/platforms.md). macOS usage is documented in [`macos/README.md`](../macos/README.md), while Windows implementation constraints live in [`windows/SKILL.md`](../windows/SKILL.md).
-2. Search the [existing issues](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/issues) and [open pull requests](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/pulls). If an active change already touches the same files, add to that discussion or split out a smaller change with no overlap.
-3. Create a branch from the latest upstream `main`. Keep each pull request focused on one problem. Do not mix a new theme, a runtime fix, and unrelated cleanup.
+1. Read the [project README](../README.en.md), [platform reference](../docs/platforms.en.md), [Windows guide](../windows/README.en.md), and implementation constraints in [`windows/SKILL.md`](../windows/SKILL.md).
+2. Search this repository's [existing issues](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues) and [open pull requests](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/pulls). If an active change already touches the same files, add to that discussion or split out a smaller change with no overlap.
+3. Create a branch from the latest `main` in `longly-boat/Codex-Dream-Skin-Yuuka`. Keep each pull request focused on one problem. Do not mix a new theme, a runtime fix, and unrelated cleanup.
 
 ## Filing an issue
 
@@ -23,13 +23,13 @@ A bug report should include:
 - Relevant logs or screenshots. Remove keys, `auth.json`, relay tokens, user-specific paths, and private conversations.
 - The last known working version or commit, when you can identify it.
 
-A feature request should explain the use case, expected behavior, alternatives considered, and whether it targets macOS, Windows, or both.
+A feature request should explain the use case, expected behavior, alternatives considered, and whether it targets Windows, shared code, or an inherited platform. Reports about inherited platforms can inform future porting work; they do not imply current Yuuka support.
 
 ## Development and verification
 
-Fork the repository and base your branch on the latest upstream `main`. Reuse existing scripts and platform helpers where possible. A small change should not require a new dependency.
+Fork this repository and base your branch on the latest Yuuka `main`. Reuse existing scripts and platform helpers where possible. A small change should not require a new dependency.
 
-### macOS
+### Inherited macOS code (when affected)
 
 Run the full test suite:
 
@@ -45,7 +45,7 @@ macos/scripts/doctor-macos.sh
 
 For injection, CSS, launch, or restore changes, also run `macos/scripts/verify-dream-skin-macos.sh` and inspect both the home and normal task routes.
 
-### Windows
+### Windows (current release platform)
 
 Run the Windows regression suite:
 
@@ -54,6 +54,10 @@ powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\windows\tests\ru
 ```
 
 For install, launch, injection, or restore changes, exercise the affected scripts and `windows/scripts/verify-dream-skin.ps1`. Include the Windows version and Codex source in the pull request.
+
+### Shared runtime
+
+After editing `runtime/`, synchronize the platform copies with `node tools/sync-runtime-assets.mjs`. Run `node tools/sync-runtime-assets.mjs --check`, applicable Node tests, and `injector.mjs --check-payload` for all three platforms. Inherited-platform checks prevent shared-code drift. State when native UI behavior was not tested; passing CI does not establish platform support.
 
 ### Documentation or repository metadata only
 
@@ -76,7 +80,9 @@ git diff --check
 1. Use a `type(scope): summary` title, such as `fix(windows): preserve UTF-8 config on restore`.
 2. Complete the [pull request template](./pull_request_template.md) and check only the verification you completed. If a platform check is blocked by the environment, name the specific blocker in Notes and include the available static or fixture evidence.
 3. Link the issue with `Closes #123`. Visual changes need screenshots of the home and task routes with private conversations and credentials removed.
-4. User-visible macOS changes should update [`macos/CHANGELOG.md`](../macos/CHANGELOG.md). Update `macos/VERSION` when the change warrants a release. User-visible Windows changes should update [`windows/CHANGELOG.md`](../windows/CHANGELOG.md).
-5. Before submitting, review the diff, test output, and branch history against upstream `main`. Remove unrelated commits from the pull request.
+4. User-visible Windows changes should update [`windows/CHANGELOG.md`](../windows/CHANGELOG.md). Update the corresponding changelog when an inherited platform is affected. A release must follow the [release process](../docs/releases/README.md), provide complete Chinese and English notes, and synchronize all nine version fields and related assertions: `macos/VERSION`, `windows/VERSION`, `macos/package.json`, `macos/scripts/common-macos.sh`, `macos/scripts/injector.mjs`, `windows/scripts/injector.mjs`, `linux/VERSION`, `linux/scripts/common-linux.sh`, and `linux/scripts/injector.mjs`. Do not bump only one platform's version.
+5. Before submitting, review the diff, test output, and branch history against this repository's `main`. Remove unrelated commits from the pull request.
 
 Maintainers may ask for a smaller scope, more evidence, or resolution of overlap with another open pull request. Continue updating the original pull request instead of opening duplicates for the same change.
+
+This fork inherits its engine and engineering foundation from the [Needy Girl Overdose project](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose). Preserve author copyrights, the MIT license, and historical contributions. Send Yuuka feedback and pull requests to this repository.

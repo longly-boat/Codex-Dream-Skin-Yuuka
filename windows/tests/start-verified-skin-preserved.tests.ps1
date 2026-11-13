@@ -117,6 +117,8 @@ function Invoke-DreamSkinStartupFixture {
   function Enter-DreamSkinOperationLock { param([int]$TimeoutMilliseconds); return 'mock-lock' }
   function Exit-DreamSkinOperationLock { param([object]$Mutex) }
   function Assert-DreamSkinPort { param([int]$Port) }
+  # No legacy engine in this lifecycle fixture; yuuka-product covers the guard.
+  function Assert-YuukaLegacyEngineInactive {}
   function Get-DreamSkinNodeRuntime {
     return [pscustomobject]@{ Path = 'mock-node.exe'; Version = '22.23.1' }
   }

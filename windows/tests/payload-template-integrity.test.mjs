@@ -103,15 +103,17 @@ function extractRendererArguments(payload) {
   // Inject an early return into the real renderer IIFE and evaluate only far
   // enough to recover its arguments. Parsing the final JSON-looking object was
   // brittle once the shared Internet Angel IIFE was appended to the payload.
-  const marker = "((cssText, artDataUrl, rawConfig, sidebarScrollQuietEnabled) => {";
+  const legacyMarker = "((cssText, artDataUrl, rawConfig, sidebarScrollQuietEnabled) => {";
+  const yuukaMarker = "((cssText, artDataUrl, themeConfig) => {";
   const start = payload.indexOf("/* dream-skin:renderer:start */");
   const end = payload.indexOf("/* dream-skin:renderer:end */");
   assert.ok(start >= 0 && end > start, "payload must delimit its canonical renderer");
   const rendererPayload = payload.slice(start + "/* dream-skin:renderer:start */".length, end);
+  const marker = rendererPayload.includes(yuukaMarker) ? yuukaMarker : legacyMarker;
   const at = rendererPayload.indexOf(marker);
   assert.notEqual(at, -1, "payload must keep the canonical renderer IIFE signature");
   const probe = `${rendererPayload.slice(0, at + marker.length)}
-return { cssText, rawConfig, sidebarScrollQuietEnabled };
+return ${marker === yuukaMarker ? '{ cssText, rawConfig: themeConfig, sidebarScrollQuietEnabled: false }' : '{ cssText, rawConfig, sidebarScrollQuietEnabled }'};
 ${rendererPayload.slice(at + marker.length)}`;
   const art = payload.match(/const __dreamSkinMotionArt = (.*);/);
   assert.ok(art, "payload must include its shared art value once");
@@ -182,9 +184,9 @@ test("an ordinary theme name is unaffected by the fix", async () => {
   assert.equal(extractRendererArguments(shipped.payload).sidebarScrollQuietEnabled, false,
     "System/Mica payloads must not run an Acrylic-only sidebar timer.");
   const acrylic = await loadPayload(undefined, null, "acrylic");
-  assert.equal(acrylic.acrylicOverlay, true);
-  assert.equal(extractRendererArguments(acrylic.payload).sidebarScrollQuietEnabled, true,
-    "The Internet Angel Acrylic payload must enable sidebar scroll quiet mode.");
+  assert.equal(acrylic.acrylicOverlay, false);
+  assert.equal(extractRendererArguments(acrylic.payload).sidebarScrollQuietEnabled, false,
+    "Yuuka must not activate the legacy Internet Angel Acrylic classifier or sidebar timer.");
 });
 
 test("legacy palette accent migrates into the normalized colors contract", async () => {
@@ -340,7 +342,7 @@ test("helper runtime and manifest changes invalidate the real Windows payload re
       for (const name of ["selectors.json", "dream-skin.css", "renderer-inject.js",
         "internet-angel-extension.css", "internet-angel-extension.js", "internet-angel-acrylic.css",
         "theme-package-validator.mjs", "safe-css-validator.mjs", "theme-preferences.mjs",
-        "motion-payload.mjs", "motion-settings.mjs", "theme-motion.js", "theme-motion.css"]) {
+        "motion-payload.mjs", "yuuka-art.mjs", "motion-settings.mjs", "theme-motion.js", "theme-motion.css"]) {
         await fs.copyFile(path.join(assetsDir, name), path.join(variantRoot, "assets", name));
       }
       await fs.writeFile(path.join(variantRoot, "assets", "css-predicate-cache.mjs"), source);

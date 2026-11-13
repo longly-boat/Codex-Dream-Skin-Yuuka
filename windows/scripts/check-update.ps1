@@ -7,10 +7,10 @@ param(
 $ErrorActionPreference = 'Stop'
 $engineRoot = Split-Path -Parent $PSScriptRoot
 $versionPath = Join-Path $engineRoot 'VERSION'
-$repository = 'EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose'
+$repository = 'longly-boat/Codex-Dream-Skin-Yuuka'
 $releasePage = "https://github.com/$repository/releases/latest"
 . (Join-Path $PSScriptRoot 'localization-windows.ps1')
-$stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+$stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
 $language = Resolve-DreamSkinLanguage -StateRoot $stateRoot
 
 function Get-DreamSkinUpdateText {
@@ -52,7 +52,8 @@ function Show-DreamSkinUpdateResult {
     return
   }
   [void][System.Windows.Forms.MessageBox]::Show(
-    (Get-DreamSkinUpdateText -Key 'UpToDate' -FormatArguments @($Result.currentVersion)),
+    $(if ($Result.noRelease) { Get-DreamSkinUpdateText -Key 'UpdateNoRelease' }
+      else { Get-DreamSkinUpdateText -Key 'UpToDate' -FormatArguments @($Result.currentVersion) }),
     (Get-DreamSkinUpdateText -Key 'UpdateTitle'),
     [System.Windows.Forms.MessageBoxButtons]::OK,
     [System.Windows.Forms.MessageBoxIcon]::Information
@@ -65,27 +66,40 @@ try {
   }
   $currentText = ([System.IO.File]::ReadAllText($versionPath)).Trim()
   $current = ConvertTo-DreamSkinVersion -Value $currentText
-  $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'CodexDreamSkin' }
+  $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'CodexDreamSkinYuuka' }
+  $noRelease = $false
   $previousProtocol = [Net.ServicePointManager]::SecurityProtocol
   try {
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repository/releases/latest" `
       -Headers $headers -Method Get -TimeoutSec 12
+  } catch {
+    # Windows PowerShell exposes HttpWebResponse; PowerShell 7 uses
+    # HttpResponseMessage. Both carry the numeric HTTP StatusCode.
+    $response = if ($_.Exception.PSObject.Properties['Response']) { $_.Exception.Response } else { $null }
+    if ($null -ne $response -and [int]$response.StatusCode -eq 404) {
+      $noRelease = $true
+    } else { throw }
   } finally {
     [Net.ServicePointManager]::SecurityProtocol = $previousProtocol
   }
-  if (-not $release.tag_name) { throw 'GitHub did not return a release tag.' }
-  $latest = ConvertTo-DreamSkinVersion -Value "$($release.tag_name)"
+  $latest = $null
+  if (-not $noRelease) {
+    if (-not $release.tag_name) { throw 'GitHub did not return a release tag.' }
+    $latest = ConvertTo-DreamSkinVersion -Value "$($release.tag_name)"
+  }
   $result = [pscustomobject]@{
-    currentVersion = "v$currentText"
-    latestVersion = "v$($latest.ToString())"
-    updateAvailable = $latest -gt $current
+    currentVersion = "v$($current.ToString())"
+    latestVersion = $(if ($noRelease) { $null } else { "v$($latest.ToString())" })
+    updateAvailable = (-not $noRelease) -and ($latest -gt $current)
+    noRelease = $noRelease
     releaseUrl = $releasePage
   }
   if ($Json) { $result | ConvertTo-Json -Compress }
   if ($Interactive) { Show-DreamSkinUpdateResult -Result $result }
   if (-not $Json -and -not $Interactive) {
-    Write-Host "$($result.currentVersion) -> $($result.latestVersion); update=$($result.updateAvailable)"
+    if ($noRelease) { Write-Host (Get-DreamSkinUpdateText -Key 'UpdateNoRelease') }
+    else { Write-Host "$($result.currentVersion) -> $($result.latestVersion); update=$($result.updateAvailable)" }
   }
 } catch {
   if ($Json) {

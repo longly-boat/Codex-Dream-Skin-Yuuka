@@ -51,6 +51,8 @@ function Exit-DreamSkinOperationLock {
   $script:lockExits += 1
 }
 function Assert-DreamSkinPort { param([int]$Port) }
+# No legacy engine in this lifecycle fixture; yuuka-product covers the guard.
+function Assert-YuukaLegacyEngineInactive {}
 function Get-DreamSkinNodeRuntime {
   return [pscustomobject]@{ Path = 'Invoke-MockForegroundInjector'; Version = '22.23.1' }
 }

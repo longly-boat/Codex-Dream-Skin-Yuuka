@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "yuuka-seminar-night",
+  "name": "优香 · 夜间核算",
+  "brandSubtitle": "SCHALE × MILLENNIUM / SEMINAR",
+  "tagline": "老师，剩下的工作，我们一起完成吧。",
+  "projectPrefix": "MISSION / ",
+  "projectLabel": "◇ 老师的工作计划",
+  "statusText": "SHITTIM CHEST / YUUKA",
+  "quote": "老师，每一份努力，都值得认真记录。",
+  "image": "background.png",
+  "appearance": "dark",
+  "art": {
+    "focusX": 0.78,
+    "focusY": 0.42,
+    "safeArea": "left",
+    "taskMode": "ambient"
+  },
+  "colors": {
+    "background": "#101c30",
+    "panel": "#15243bf7",
+    "panelAlt": "#101e34c7",
+    "accent": "#73d5f4",
+    "accentAlt": "#9ab4ff",
+    "secondary": "#82dce8",
+    "highlight": "#b4a0ee",
+    "text": "#e8f3ff",
+    "muted": "#b0c3d9",
+    "line": "#3a526f"
+  }
+}

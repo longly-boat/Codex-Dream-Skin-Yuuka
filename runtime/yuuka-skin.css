@@ -1,0 +1,1031 @@
+/* Trusted Yuuka shell. Paired with the canonical renderer, never the Windows
+   Internet Angel decorator. Native layout, controls and busy states remain. */
+@layer dreamskin-accessibility, dreamskin-community;
+
+html[data-dream-skin="active"] {
+  color-scheme: light !important;
+  color: var(--ds-text);
+  background: var(--ds-bg);
+  --color-token-foreground: var(--ds-text);
+  --color-token-text-secondary: var(--ds-muted);
+  --color-token-muted-foreground: var(--ds-muted);
+  --color-token-description-foreground: var(--ds-muted);
+  --color-token-input-placeholder-foreground: var(--ds-muted);
+  --color-token-border: var(--ds-line);
+  --color-token-border-default: var(--ds-line);
+  --color-token-dropdown-background: var(--ds-panel);
+  --color-token-list-hover-background: rgb(var(--ds-accent-rgb) / .08);
+  --color-token-main-surface-primary: transparent;
+  --color-token-main-surface-secondary: var(--ds-panel-2);
+  --color-token-sidebar-surface-primary: transparent;
+  --color-token-input-background: transparent;
+}
+html[data-dream-skin="active"][data-dream-shell="dark"] { color-scheme: dark !important; }
+
+/* Solid task pages are the default, including initial paint and unknown
+   routes. Only Home owns the fixed, registered wallpaper projection. */
+html[data-dream-skin="active"] body {
+  color: var(--ds-text) !important;
+  background-color: var(--ds-bg) !important;
+  background-image: none !important;
+}
+html[data-dream-skin="active"][data-dream-motion-route="home"] body {
+  background-image: var(--dream-skin-art) !important;
+  background-position: var(--dream-art-focus-x, 78%) var(--dream-art-focus-y, 42%) !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+/* Hide only decorative paint during route changes; native/task status
+   feedback remains available. Also guard an in-flight theme handoff. */
+html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-dream-motion-owned]:is(
+  [data-dream-motion-role="background-character"],
+  [data-dream-motion-role="background-scene"],
+  [data-dream-motion-role="character"],
+  [data-dream-motion-role="ambient"],
+  [data-dream-motion-role="theme-transition"]
+) {
+  display: none !important;
+  animation: none !important;
+}
+html[data-dream-skin="active"] :is(#root, [data-app-shell-frame], [data-app-shell-page-surface="true"], [data-app-shell-workspace-row]) {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+html[data-dream-skin="active"] [data-ds-part="main"] {
+  color: var(--ds-text) !important;
+  background: var(--ds-bg) !important;
+  border-color: var(--ds-line) !important;
+  box-shadow: none !important;
+}
+html[data-dream-skin="active"][data-dream-motion-route="home"] [data-ds-part="main"] {
+  background: linear-gradient(90deg, rgb(var(--ds-panel-rgb) / .20), rgb(var(--ds-panel-rgb) / .08) 54%, rgb(var(--ds-panel-rgb) / .02)) !important;
+}
+/* The home composer has no active task status. Do not display the motion
+   controller's unanchored unknown-state dot above its suggestions. */
+html[data-dream-skin="active"][data-dream-motion-route="home"] [data-dream-motion-role="status"] {
+  display: none !important;
+}
+html[data-dream-skin="active"] [data-ds-part="home"],
+html[data-dream-skin="active"] [data-ds-part="thread"] {
+  color: var(--ds-text) !important;
+  background: transparent !important;
+}
+
+html[data-dream-skin="active"] [data-ds-part="sidebar"] {
+  color: var(--ds-text) !important;
+  background: rgb(var(--ds-panel-2-rgb) / var(--ds-upload-panel-alt-alpha, .78)) !important;
+  border-right: 1px solid var(--ds-line) !important;
+  box-shadow: none !important;
+  background-image: linear-gradient(90deg, var(--ds-cyan), var(--ds-green) 56%, transparent 56%) !important;
+  background-size: 76px 2px !important;
+  background-position: 20px 0 !important;
+  background-repeat: no-repeat !important;
+}
+html[data-dream-skin="active"] [data-ds-part="sidebar"] :is(nav, .sidebar-navigation) { background: transparent !important; }
+html[data-dream-skin="active"] [data-ds-part="sidebar"] :is(button, a) {
+  color: var(--ds-text);
+  border-radius: 7px;
+}
+html[data-dream-skin="active"] [data-ds-part="sidebar"] :is(button, a):hover { background-color: rgb(var(--ds-accent-rgb) / .09) !important; }
+html[data-dream-skin="active"] [data-ds-part="sidebar"] [aria-current="page"] {
+  background-color: rgb(var(--ds-accent-rgb) / .12) !important;
+  box-shadow: inset 3px 0 var(--ds-cyan);
+}
+html[data-dream-skin="active"] [data-ds-part="header"] {
+  color: var(--ds-text) !important;
+  background: rgb(var(--ds-panel-rgb) / .82) !important;
+  border-bottom: 1px solid var(--ds-line) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+html[data-dream-skin="active"] :is([data-app-shell-titlebar="true"], [class~="group/application-menu-top-bar"]) {
+  color: var(--ds-text) !important;
+  background-color: rgb(var(--ds-panel-rgb) / .9) !important;
+  text-shadow: none !important;
+}
+html[data-dream-skin="active"][data-dream-motion-route="home"] :is(
+  [data-ds-part="header"], [data-app-shell-titlebar="true"], [class~="group/application-menu-top-bar"]
+) {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-ds-part="sidebar"] {
+  background-color: rgb(var(--ds-panel-2-rgb)) !important;
+}
+html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) :is(
+  [data-ds-part="header"], [data-app-shell-titlebar="true"], [class~="group/application-menu-top-bar"]
+) {
+  background-color: rgb(var(--ds-panel-rgb)) !important;
+}
+
+/* Only the exact native greeting is hidden by the Yuuka renderer. Its project
+   button remains in the DOM, and the normal composer selector is untouched. */
+html[data-dream-skin="active"] [data-yuuka-native-hidden="true"] { display: none !important; }
+html[data-dream-skin="active"] [data-testid="home-icon"] {
+  position: relative;
+  color: transparent !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-dream-skin="active"] [data-testid="home-icon"] > * { visibility: hidden !important; }
+html[data-dream-skin="active"] [data-testid="home-icon"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 15px;
+  border: 3px solid var(--ds-cyan);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-12deg);
+  box-shadow: inset 0 0 0 2px rgb(var(--ds-panel-rgb) / .8);
+  pointer-events: none;
+}
+html[data-dream-skin="active"] #codex-yuuka-home-greeting {
+  width: 100%;
+  padding: 8px 16px;
+}
+html[data-dream-skin="active"] #codex-yuuka-home-greeting h1 {
+  color: var(--ds-text);
+  font-size: clamp(20px, 2.3vw, 30px);
+  line-height: 1.5;
+  font-weight: 600;
+  margin: 10px 0 0;
+  text-wrap: balance;
+}
+html[data-dream-skin="active"] [data-yuuka-halo] {
+  order: -1;
+  display: block;
+  width: 50px;
+  height: 18px;
+  margin: 0 auto 18px;
+  border: 3px solid var(--ds-cyan);
+  border-radius: 50%;
+  transform: rotate(-12deg);
+  box-shadow: inset 0 0 0 2px rgb(var(--ds-panel-rgb) / .8), 0 0 0 1px rgb(var(--ds-accent-rgb) / .25);
+  background: linear-gradient(90deg, transparent 42%, var(--ds-green) 43% 48%, transparent 49% 61%, var(--ds-cyan) 62% 66%, transparent 67%);
+  pointer-events: none;
+}
+
+/* Compact, in-flow labels. Do not replace the native title or suggestions. */
+html[data-dream-skin="active"] [data-ds-part="home-hero"] {
+  color: var(--ds-text) !important;
+  text-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  row-gap: 0 !important;
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
+}
+html[data-dream-skin="active"] [data-ds-part="home-hero"]::before {
+  content: var(--dream-skin-brand-subtitle);
+  display: table;
+  max-width: 100%;
+  margin-block-end: 12px;
+  padding: 7px 12px 7px 42px;
+  color: var(--ds-green);
+  border: 1px solid rgb(var(--ds-secondary-rgb) / .3);
+  border-radius: 3px 10px 3px 10px;
+  background-color: rgb(var(--ds-panel-rgb) / .88);
+  background-image:
+    radial-gradient(ellipse 12px 5px at 20px 50%, transparent 52%, var(--ds-cyan) 58% 73%, transparent 79%),
+    linear-gradient(135deg, transparent 42%, var(--ds-cyan) 44% 56%, transparent 58%);
+  background-size: 38px 100%, 7px 7px;
+  background-position: 0 0, 17px 50%;
+  background-repeat: no-repeat;
+  font: 600 10px/1.5 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  letter-spacing: .12em;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+html[data-dream-skin="active"] [data-ds-part="home-hero"]::after {
+  content: var(--dream-skin-tagline);
+  display: block;
+  margin-block-start: 12px;
+  max-width: 36em;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid rgb(var(--ds-secondary-rgb) / .55);
+  color: var(--ds-muted);
+  font: 400 13px/1.7 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+html[data-dream-skin="active"] :is(.group\/home-suggestions, [data-feature="home-suggestions"], [data-testid="home-suggestions"]) button {
+  color: var(--ds-text) !important;
+  background: rgb(var(--ds-panel-rgb) / .92) !important;
+  border: 1px solid var(--ds-line) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  border-top-color: rgb(var(--ds-secondary-rgb) / .62) !important;
+}
+html[data-dream-skin="active"] :is(.group\/home-suggestions, [data-feature="home-suggestions"], [data-testid="home-suggestions"]) button:hover {
+  border-color: var(--ds-green) !important;
+  background: rgb(var(--ds-panel-2-rgb) / .96) !important;
+}
+
+html[data-dream-skin="active"] [data-ds-part="composer"] {
+  color: var(--ds-text) !important;
+  background: rgb(var(--ds-panel-rgb) / var(--ds-upload-panel-alpha, .97)) !important;
+  border: 1px solid var(--ds-line) !important;
+  border-top: 3px solid var(--ds-cyan) !important;
+  border-radius: 8px 8px 16px 8px !important;
+  box-shadow: 0 8px 24px rgb(var(--ds-bg-rgb) / .12) !important;
+  backdrop-filter: none !important;
+  background-image:
+    linear-gradient(135deg, transparent 42%, rgb(var(--ds-secondary-rgb) / .35) 44% 56%, transparent 58%),
+    linear-gradient(135deg, transparent 42%, rgb(var(--ds-accent-rgb) / .22) 44% 56%, transparent 58%);
+  background-size: 8px 8px, 8px 8px;
+  background-position: right 13px top 9px, right 24px top 9px;
+  background-repeat: no-repeat;
+}
+html[data-dream-skin="active"] [data-ds-part="composer"] > [class*="_ComposerLayoutBody_"] {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+html[data-dream-skin="active"] [data-ds-part="composer-toolbar"] {
+  color: var(--ds-muted) !important;
+  background: transparent !important;
+}
+html[data-dream-skin="active"] [data-composer-home-utility-bar-position="above"] {
+  color: var(--ds-text) !important;
+  background: rgb(var(--ds-panel-rgb) / .94) !important;
+  border: 1px solid var(--ds-line) !important;
+  border-bottom: 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+}
+html[data-dream-skin="active"] [data-ds-part="composer"] :is(textarea, [contenteditable="true"]) {
+  color: var(--ds-text) !important;
+  caret-color: var(--ds-green);
+  background-color: transparent !important;
+}
+html[data-dream-skin="active"] [data-ds-part="project-list"] { color: var(--ds-muted) !important; }
+/* On solid task pages, native user bubbles and composer keep their surfaces;
+   assistant prose and tool activity return to the normal document flow. */
+html[data-dream-skin="active"] [data-ds-part="message"] {
+  color: var(--ds-text);
+}
+
+html[data-dream-skin="active"] :is([data-ds-part="dialog"], [role="menu"], [role="listbox"], [role="tooltip"], [data-radix-tooltip-content], [class~="bg-token-dropdown-background"]) {
+  color: var(--ds-text) !important;
+  background-color: var(--ds-panel) !important;
+  border-color: var(--ds-line) !important;
+  box-shadow: 0 8px 26px rgb(var(--ds-bg-rgb) / .16);
+}
+html[data-dream-skin="active"] :is(button, a, input, textarea, [contenteditable="true"]):focus-visible {
+  outline: 2px solid var(--ds-cyan);
+  outline-offset: 2px;
+}
+html[data-dream-skin="active"] [data-ds-part="dialog"] [class*="text-token-foreground"] { color: var(--ds-text) !important; }
+html[data-dream-skin="active"] [data-ds-part="dialog"] [class*="text-token-description-foreground"] { color: var(--ds-muted) !important; }
+
+/* Native titlebar, page insets and window-control geometry are intentionally
+   left to the app. Only their paint is themed above. */
+
+/* Millennium reference: https://static.wikitide.net/bluearchivewiki/2/2a/Millennium.png
+   The two polygons reproduce the verified school emblem's silhouette. */
+html[data-dream-skin="active"] {
+  --yuuka-millennium: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='90 160 512 344'%3E%3Cpath d='M101 172H383L194 492 142 429 242 253H166ZM424 172H591V252L454 492 402 432 505 251H465L322 490 272 429Z'/%3E%3C/svg%3E");
+  --yuuka-calculator: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='22' viewBox='0 0 18 22' fill='none' stroke='%233998b4' stroke-width='1.3'%3E%3Crect x='1' y='1' width='16' height='20' rx='3'/%3E%3Cpath d='M4 5h10v4H4zM4 13h2m3 0h2m3 0h1M4 17h2m3 0h2m3 0h1'/%3E%3C/svg%3E");
+}
+html[data-dream-skin="active"] [data-testid="home-icon"]::after,
+html[data-dream-skin="active"] [data-yuuka-halo] {
+  width: 54px;
+  height: 38px;
+  border: 0;
+  border-radius: 0;
+  background: var(--ds-cyan);
+  box-shadow: none;
+  mask: var(--yuuka-millennium) center / contain no-repeat;
+  animation: yuuka-emblem-breathe 8s ease-in-out infinite;
+}
+html[data-dream-skin="active"] [data-testid="home-icon"]::after { transform: translate(-50%, -50%); }
+html[data-dream-skin="active"] [data-yuuka-halo] { transform: none; }
+@keyframes yuuka-emblem-breathe { 0%, 100% { opacity: .82; } 50% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  html[data-dream-skin="active"] [data-testid="home-icon"]::after,
+  html[data-dream-skin="active"] [data-yuuka-halo] { animation: none; }
+}
+/* Existing navigation controls keep their native geometry and click target. */
+html[data-dream-skin="active"] [data-yuuka-new-chat] {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  background-color: rgb(var(--ds-accent-rgb) / .07);
+}
+html[data-dream-skin="active"] [data-yuuka-new-chat] svg {
+  color: var(--ds-cyan);
+  border: 1px solid rgb(var(--ds-accent-rgb) / .45);
+  border-radius: 6px 6px 6px 1px;
+  padding: 2px;
+}
+html[data-dream-skin="active"] [data-yuuka-schale] {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-inline-start: auto;
+  max-width: 74px;
+  min-width: 0;
+  flex: 0 1 74px;
+  overflow: hidden;
+  color: var(--ds-green);
+  font: 600 8px/1.4 "Segoe UI", sans-serif;
+  letter-spacing: .06em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Simplified Schale geometry: https://booth.pm/ja/items/5519735 */
+html[data-dream-skin="active"] [data-yuuka-schale]::before {
+  content: "";
+  width: 16px;
+  height: 20px;
+  flex: 0 0 16px;
+  background: currentColor;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 28' fill='none' stroke='black' stroke-width='1.4'%3E%3Cellipse cx='12' cy='4' rx='7' ry='2.2'/%3E%3Ccircle cx='12' cy='17' r='8'/%3E%3Cpath d='M12 7v20M2 17h20M12 10l3 7-3 7-3-7Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+html[data-dream-skin="active"] [data-ds-part="project-list"] {
+  border-inline-start: 2px solid rgb(var(--ds-accent-rgb) / .4);
+  border-radius: 2px 7px 2px 2px;
+  background-color: rgb(var(--ds-panel-rgb) / .6);
+}
+html[data-dream-skin="active"] [data-ds-part="header"] {
+  background-image: linear-gradient(135deg, transparent calc(100% - 16px), rgb(var(--ds-accent-rgb) / .18) calc(100% - 15px));
+}
+html[data-dream-skin="active"] [data-ds-part="composer"] {
+  background-image: var(--yuuka-calculator);
+  background-size: 14px 17px;
+  background-position: right 14px top 7px;
+  background-repeat: no-repeat;
+}
+html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-testid="home-icon"]::after,
+html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-yuuka-halo],
+html[data-dream-skin="active"]:is([data-dream-motion="off"], [data-dream-motion-paused="true"]) [data-testid="home-icon"]::after,
+html[data-dream-skin="active"]:is([data-dream-motion="off"], [data-dream-motion-paused="true"]) [data-yuuka-halo] { animation: none; }
+/* Replace only the existing glyph's paint; the native button handles events. */
+html[data-dream-skin="active"] [data-yuuka-new-chat] svg {
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  color: transparent;
+  stroke: transparent;
+  fill: transparent;
+  background-color: var(--ds-cyan);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linejoin='round'%3E%3Cpath d='M5 3h14a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9l-6 4V5a2 2 0 0 1 2-2Z'/%3E%3Cpath d='M7 8h10M7 12h7'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html[data-dream-skin="active"] [data-yuuka-new-chat] svg > * { visibility: hidden; }
+html[data-dream-skin="active"] [data-ds-part="header"] {
+  background-image: linear-gradient(135deg, transparent calc(100% - 16px), rgb(var(--ds-accent-rgb) / .18) calc(100% - 15px)) !important;
+}
+html[data-dream-skin="active"] [data-ds-part="composer"] {
+  background-image: var(--yuuka-calculator) !important;
+  background-size: 14px 17px !important;
+  background-position: right 14px top 7px !important;
+  background-repeat: no-repeat !important;
+}
+
+/* Selection uses its left rail only; never paint a marker over title text. */
+html[data-dream-skin="active"] [data-ds-part="sidebar"] [aria-current="page"] { background-image: none !important; }
+html[data-dream-skin="active"] [data-yuuka-project-icon] {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  background-color: var(--ds-cyan) !important;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.6' stroke-linejoin='round'%3E%3Cpath d='M3 5h7l2 3h9v12H3zM7 12h10M7 16h6'/%3E%3Cpath d='M17 15l2 2-2 2-2-2z' fill='black' stroke='none'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+html[data-dream-skin="active"] [data-yuuka-project-icon] > * { visibility: hidden !important; }
+/* Yuuka task presets occupy normal document flow, including narrow windows. */
+html[data-dream-skin="active"] .yuuka-task-deck {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  width: min(960px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 20px auto 16px;
+  padding: 0 12px;
+  flex: 0 0 auto;
+  align-self: center;
+}
+html[data-dream-skin="active"] .yuuka-task-card {
+  --mission-rgb: 0 137 180;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 11px;
+  min-width: 0;
+  min-height: 178px;
+  padding: 38px 14px 0;
+  overflow: hidden;
+  text-align: left;
+  color: var(--ds-text);
+  background: linear-gradient(135deg, transparent 55%, rgb(var(--mission-rgb) / .09) 55% 69%, transparent 69%), rgb(var(--ds-panel-rgb) / .96);
+  border: 1px solid rgb(var(--mission-rgb) / .42);
+  border-top: 3px solid rgb(var(--mission-rgb));
+  border-radius: 3px 20px 3px 3px;
+  cursor: pointer;
+  box-shadow: 3px 4px 0 rgb(var(--mission-rgb) / .16);
+  transition: border-color 140ms ease, background-color 140ms ease, translate 140ms ease;
+}
+html[data-dream-skin="active"] .yuuka-task-card[data-yuuka-mission="1"] { --mission-rgb: 48 110 194; }
+html[data-dream-skin="active"] .yuuka-task-card[data-yuuka-mission="2"] { --mission-rgb: 99 90 164; }
+html[data-dream-skin="active"] .yuuka-task-card[data-yuuka-mission="3"] { --mission-rgb: 0 143 151; }
+html[data-dream-skin="active"] .yuuka-task-card:hover { border-color: rgb(var(--mission-rgb)); background-color: rgb(var(--ds-panel-2-rgb)); translate: 0 -3px; }
+html[data-dream-skin="active"] .yuuka-task-card:focus-visible { outline: 2px solid var(--ds-cyan); outline-offset: 3px; }
+html[data-dream-skin="active"] .yuuka-task-heading { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; padding: 0 2px 3px; color: var(--ds-text); font: 600 11px/1.4 "Segoe UI", "Microsoft YaHei UI", sans-serif; letter-spacing: 1px; }
+html[data-dream-skin="active"] .yuuka-task-heading > :last-child { color: var(--ds-cyan); font-size: 9px; letter-spacing: 1.3px; }
+html[data-dream-skin="active"] .yuuka-task-channel { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center; gap: 6px; padding: 6px 12px; background: rgb(var(--mission-rgb) / .09); color: rgb(var(--mission-rgb)); font: 700 9px/1.3 "Segoe UI", sans-serif; letter-spacing: .9px; }
+html[data-dream-skin="active"] .yuuka-task-channel b { font: italic 700 13px/1 monospace; }
+html[data-dream-skin="active"] .yuuka-task-sigil { position: absolute; pointer-events: none; width: 88px; height: 88px; right: -13px; top: 30px; color: rgb(var(--mission-rgb)); opacity: .10; transform: rotate(-12deg); }
+html[data-dream-skin="active"] .yuuka-task-sigil svg { width: 100%; height: 100%; }
+html[data-dream-skin="active"] .yuuka-task-icon { position: relative; display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; color: #fff; background: rgb(var(--mission-rgb)); border: 2px solid rgb(var(--ds-panel-rgb)); border-radius: 5px 13px 5px 5px; box-shadow: 2px 3px 0 rgb(var(--mission-rgb) / .26); transform: rotate(-7deg); }
+html[data-dream-skin="active"] .yuuka-task-icon svg { width: 28px; height: 28px; transform: rotate(7deg); }
+html[data-dream-skin="active"] .yuuka-task-icon i { position: absolute; top: -6px; right: -7px; display: grid; place-items: center; width: 15px; height: 15px; color: #fff; background: #30c3d7; border: 1px solid rgb(var(--ds-panel-rgb)); border-radius: 3px; font: 9px/1 sans-serif; }
+html[data-dream-skin="active"] [data-yuuka-mission="2"] .yuuka-task-icon i { background: #e8b84b; }
+html[data-dream-skin="active"] .yuuka-task-copy { position: relative; display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+html[data-dream-skin="active"] .yuuka-task-copy strong { font: 750 16px/1.4 "Segoe UI", "Microsoft YaHei UI", sans-serif; letter-spacing: .5px; }
+html[data-dream-skin="active"] .yuuka-task-copy small { color: var(--ds-muted); font: 400 11px/1.5 "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+html[data-dream-skin="active"] .yuuka-task-footer { position: relative; align-self: stretch; display: flex; align-items: center; justify-content: space-between; margin: auto -14px 0; padding: 5px 13px; color: rgb(var(--mission-rgb)); background: rgb(var(--mission-rgb) / .10); border-top: 1px solid rgb(var(--mission-rgb) / .15); font: 600 10px/1.4 "Segoe UI", "Microsoft YaHei UI", sans-serif; }
+html[data-dream-skin="active"] .yuuka-task-footer b { font: 700 20px/1 sans-serif; }
+@media (prefers-reduced-motion: reduce) { html[data-dream-skin="active"] .yuuka-task-card { transition: none; translate: none; } }
+@container home-main-content (max-width: 760px) { html[data-dream-skin="active"] .yuuka-task-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container home-main-content (max-width: 380px) { html[data-dream-skin="active"] .yuuka-task-deck { grid-template-columns: minmax(0, 1fr); } }
+
+/* Native Codex surfaces use the newer palette as well as token aliases.
+   Scope this bridge to the installed Yuuka stylesheet so native controls
+   remain functional without inheriting the old pink base theme. */
+html[data-dream-skin="active"] {
+  --color-surface: var(--ds-panel) !important;
+  --color-surface-primary: var(--ds-panel) !important;
+  --color-surface-secondary: var(--ds-panel-2) !important;
+  --color-surface-tertiary: var(--ds-panel-2) !important;
+  --color-surface-elevated: var(--ds-panel) !important;
+  --color-surface-elevated-secondary: var(--ds-panel) !important;
+  --color-surface-card: var(--ds-panel) !important;
+  --app-color-background-shell: transparent !important;
+  --app-color-background-surface-under: transparent !important;
+  --app-color-background-editor-opaque: var(--ds-panel) !important;
+  --app-color-background-elevated-primary: var(--ds-panel) !important;
+  --app-color-background-elevated-secondary: var(--ds-panel) !important;
+  --color-background-composer-surface: var(--ds-panel) !important;
+  --color-background-composer-action-bar: var(--ds-panel-2) !important;
+  --color-background-control-opaque: var(--ds-panel) !important;
+  --color-background-execution-output: var(--ds-panel-2) !important;
+  --color-background-primary-soft-alpha: var(--ds-panel) !important;
+  --color-text-primary-surface: var(--ds-text) !important;
+  --color-text-foreground: var(--ds-text) !important;
+  --color-text-foreground-secondary: var(--ds-muted) !important;
+  --app-color-text-foreground: var(--ds-text) !important;
+  --app-color-text-foreground-secondary: var(--ds-muted) !important;
+  --color-background-composer-primary: var(--ds-cyan) !important;
+  --codex-theme-accent-color: var(--ds-cyan) !important;
+  --app-color-icon-accent: var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] [data-ds-part="main"] .pointer-events-none.absolute.bottom-0.bg-surface {
+  background: transparent !important;
+}
+
+/* Work surfaces: native structure, native labels and native state. These
+   paint-only rules need no classifier, polling or new animation. Current
+   26.1103 resource cards use --resource-card-row-padding-x; retain the older
+   --thread-resource-card-row-padding-x alias for compatible clients. */
+html[data-dream-skin="active"] {
+  --yuuka-work-edge: rgb(var(--ds-accent-rgb) / .24);
+  --yuuka-work-tint: rgb(var(--ds-accent-rgb) / .065);
+  --yuuka-work-selected: rgb(var(--ds-accent-rgb) / .13);
+  --yuuka-work-float: rgb(var(--ds-panel-rgb));
+  --yuuka-audit-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 28' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='2' width='16' height='23' rx='2'/%3E%3Cpath d='M7 6h10v5H7zM7 15h2m4 0h1m3 0h0M7 19h2m4 0h1m3 0h0M7 22h2m4 0h1'/%3E%3C/svg%3E");
+}
+
+/* Seminar audit records. Never recolor descendants en masse: diff additions,
+   deletions, warnings and destructive actions keep their semantic colors. */
+html[data-dream-skin="active"] :is(
+  [class*="--resource-card-row-padding-x:"],
+  [class*="--thread-resource-card-row-padding-x:"],
+  [class~="rounded-lg"][class*="bg-token-dropdown-background"]
+):has(> [class~="group/turn-diff-header"]) {
+  background: var(--ds-panel) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  border-radius: 7px 14px 7px 7px !important;
+  box-shadow: inset 0 0 0 1px var(--yuuka-work-edge), inset 3px 0 var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] {
+  background: linear-gradient(115deg, var(--yuuka-work-tint), transparent 68%) !important;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] [class~="size-10"][class~="rounded-lg"]:has(> svg) {
+  position: relative;
+  color: var(--ds-cyan) !important;
+  background: var(--yuuka-work-selected) !important;
+  border-radius: 5px 10px 5px 5px !important;
+  box-shadow: inset 0 0 0 1px var(--yuuka-work-edge);
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] [class~="size-10"][class~="rounded-lg"] > svg {
+  opacity: 0;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] [class~="size-10"][class~="rounded-lg"]:has(> svg)::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  background: var(--ds-cyan);
+  mask: var(--yuuka-audit-glyph) center / contain no-repeat;
+  pointer-events: none;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] :is(.turn-diff-default-subtitle, .turn-diff-hover-subtitle) {
+  font-variant-numeric: tabular-nums;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] .turn-diff-hover-subtitle {
+  color: var(--ds-green) !important;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] [class~="pointer-events-auto"] button {
+  border-color: var(--yuuka-work-edge) !important;
+  background-color: var(--yuuka-work-tint) !important;
+}
+html[data-dream-skin="active"] [class~="group/turn-diff-header"] [class~="pointer-events-auto"] button:not(:disabled):not([aria-disabled="true"]):hover,
+html[data-dream-skin="active"] :is([class*="--resource-card-row-padding-x:"], [class*="--thread-resource-card-row-padding-x:"]):has(> [class~="group/turn-diff-header"]) :is(.thread-diff-virtualized, [class~="group/turn-diff-file-row"]) button:not(:disabled):not([aria-disabled="true"]):hover {
+  background-color: var(--yuuka-work-selected) !important;
+}
+
+/* Shittim Chest: the native settings content already exposes group/settings.
+   Scope controls to that root, not a broad main/tabpanel or every button. */
+html[data-dream-skin="active"] [class~="group/settings"] {
+  color: var(--ds-text);
+  --color-chart-blue: var(--ds-cyan);
+  --color-border: var(--ds-line);
+  --color-border-default: var(--ds-line);
+}
+html[data-dream-skin="active"] [class~="group/settings"] div.flex.flex-col.overflow-hidden.rounded-2xl {
+  background: var(--ds-panel) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  border-radius: 8px 16px 8px 8px !important;
+  box-shadow: inset 0 2px var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] [class~="group/settings"] [class~="@container/settings-row"]:hover {
+  background-color: var(--yuuka-work-tint) !important;
+}
+html[data-dream-skin="active"] [class~="group/settings"] :is(h1, h2, h3) {
+  color: var(--ds-text);
+  text-decoration-color: var(--ds-cyan);
+}
+html[data-dream-skin="active"] [class~="group/settings"] :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, button[aria-haspopup]) {
+  background-color: var(--ds-panel-2) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  color: var(--ds-text) !important;
+  box-shadow: inset 0 0 0 1px var(--yuuka-work-edge);
+}
+html[data-dream-skin="active"] [class~="group/settings"] [role="switch"] > span[data-state="checked"] {
+  background: var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] [class~="group/settings"] [role="switch"] > span[data-state="unchecked"] {
+  background: rgb(var(--ds-accent-rgb) / .18) !important;
+}
+html[data-dream-skin="active"] nav:has([data-settings-panel-slug]) [data-settings-panel-slug]:is([aria-current="page"], [aria-selected="true"], [class~="bg-primary-ghost-hover"]) {
+  background: var(--yuuka-work-selected) !important;
+  box-shadow: inset 3px 0 var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] nav:has([data-settings-panel-slug]) [data-settings-panel-slug] svg {
+  color: var(--ds-green);
+}
+html[data-dream-skin="active"] nav:has([data-settings-panel-slug]) [role="searchbox"] {
+  background: transparent !important;
+  color: var(--ds-text) !important;
+  box-shadow: none !important;
+}
+
+/* Native menu portals and the role-less add/slash palette share the same
+   blue-white frame. Do not alter placement, item height, focus or names. */
+html[data-dream-skin="active"] :is(
+  [role="menu"], [role="listbox"],
+  div:has(> [data-mention-list-scroll-area]),
+  div[class~="border-token-border"][class*="bg-token-dropdown-background"][class~="overflow-hidden"][class~="rounded-2xl"]:has(> .vertical-scroll-fade-mask[class~="overflow-y-auto"])
+) {
+  background: var(--yuuka-work-float) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  border-radius: 8px 14px 8px 8px !important;
+  box-shadow: inset 0 2px var(--ds-cyan), 0 8px 24px rgb(var(--ds-bg-rgb) / .16) !important;
+  backdrop-filter: none !important;
+}
+html[data-dream-skin="active"] :is([role="menu"], [role="listbox"]) :is(
+  [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"]
+):not([aria-disabled="true"]):not([data-disabled]):is(:hover, :focus-visible, [data-highlighted], [aria-selected="true"]) {
+  background: var(--yuuka-work-selected) !important;
+  box-shadow: inset 2px 0 var(--ds-cyan);
+}
+html[data-dream-skin="active"] :is([role="menu"], [role="listbox"]) [role="separator"] {
+  background-color: var(--ds-line) !important;
+}
+html[data-dream-skin="active"] div[class~="border-token-border"][class*="bg-token-dropdown-background"][class~="rounded-2xl"]:has(> .vertical-scroll-fade-mask) button[class~="w-full"][class~="text-left"]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [data-highlighted]) {
+  background: var(--yuuka-work-selected) !important;
+  box-shadow: inset 2px 0 var(--ds-cyan);
+}
+html[data-dream-skin="active"] [data-mention-list-scroll-area] [data-list-navigation-item]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [class~="bg-primary-ghost-hover"]) {
+  background: var(--yuuka-work-selected) !important;
+  box-shadow: inset 2px 0 var(--ds-cyan);
+}
+html[data-dream-skin="active"] [data-mention-list-scroll-area] [class~="sticky"][class~="top-0"] {
+  background-color: var(--ds-panel) !important;
+  color: var(--ds-muted) !important;
+}
+
+/* Schale task briefing. Only real native context and project controls are
+   decorated; never synthesize branches, goal steps or status messages. */
+html[data-dream-skin="active"] :is(main[data-app-shell-main-surface], main.main-surface, main[class*="_MainContentSurface_"]) [class~="sticky"][class~="bottom-0"] div.relative.min-w-0.overflow-clip.border-x.border-t,
+html[data-dream-skin="active"] [data-composer-home-utility-bar-position="above"] {
+  background: linear-gradient(100deg, var(--yuuka-work-tint), transparent 80%), var(--ds-panel) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  box-shadow: inset 3px 0 var(--ds-cyan);
+}
+html[data-dream-skin="active"] [data-ds-part="project-list"] {
+  background-color: var(--yuuka-work-tint) !important;
+  border-color: var(--yuuka-work-edge) !important;
+}
+html[data-dream-skin="active"] [data-ds-part="project-list"] :is(button, [role="combobox"]):is(:hover, :focus-visible, [data-state="open"]) {
+  background-color: var(--yuuka-work-selected) !important;
+}
+/* Current composer utility bar: this scroll region contains project, work
+   location and (when available) branch controls. Keep its native overflow. */
+html[data-dream-skin="active"] [data-composer-utility-bar-scroll-area] {
+  background: linear-gradient(100deg, var(--yuuka-work-tint), transparent 80%), var(--ds-panel) !important;
+  border-radius: 7px 11px 0 0;
+  box-shadow: inset 3px 0 var(--ds-cyan), inset 0 1px var(--yuuka-work-edge);
+}
+html[data-dream-skin="active"] [data-composer-utility-bar-scroll-area] button {
+  color: var(--ds-text) !important;
+}
+html[data-dream-skin="active"] [data-composer-utility-bar-scroll-area] button svg {
+  color: var(--ds-cyan);
+}
+html[data-dream-skin="active"] [data-composer-utility-bar-scroll-area] button:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [data-state="open"]) {
+  background: var(--yuuka-work-selected) !important;
+}
+/* Current compact changes summary, identified by its native numerical pair.
+   Its red/green children and animated count retain their own paint. */
+html[data-dream-skin="active"] div.rounded-3xl.border.bg-surface-elevated-secondary:has(button.rounded-sm > .truncate-text):has(.text-codex-git-added):has(.text-codex-git-deleted) {
+  background: var(--ds-panel) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  box-shadow: inset 3px 0 var(--ds-cyan);
+}
+html[data-dream-skin="active"] button.rounded-sm:has(> .truncate-text + [data-thread-find-skip]):has(.text-codex-git-added):has(.text-codex-git-deleted) {
+  color: var(--ds-text) !important;
+}
+/* The environment popover must have both its native section controls and
+   an actual Git signal; matching arbitrary git-colored code is insufficient. */
+html[data-dream-skin="active"] [data-radix-popper-content-wrapper] div.rounded-3xl:is([class*="bg-token-dropdown-background"], [class~="bg-surface-elevated-secondary"]):has(button[class~="group/section-toggle"]):has([data-testid*="git"], [aria-label*="git" i]) {
+  background: var(--ds-panel) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  box-shadow: inset 3px 0 var(--ds-cyan), 0 8px 24px rgb(var(--ds-bg-rgb) / .16) !important;
+}
+
+/* Current local-environment popover and its portaled branch menu. The
+   navigation marker survives locale changes; the native menu stays in its
+   own portal so its collision handling, search and selection remain intact. */
+html[data-dream-skin="active"] [role="dialog"][data-slot="popover-content"]:has([data-composer-navigation-target="branch"]) {
+  background: var(--yuuka-work-float) !important;
+  border-color: var(--yuuka-work-edge) !important;
+  border-radius: 8px 14px 8px 8px !important;
+  box-shadow: inset 0 2px var(--ds-cyan), 0 8px 24px rgb(var(--ds-bg-rgb) / .16) !important;
+  backdrop-filter: none !important;
+}
+html[data-dream-skin="active"] :is([role="menu"], [role="listbox"], [role="dialog"][data-slot="popover-content"]:has([data-composer-navigation-target="branch"])) :is(.text-tertiary, .text-codex-description, [data-menu-section-label]) {
+  color: var(--ds-muted) !important;
+}
+html[data-dream-skin="active"] :is([role="menu"], [role="listbox"]) input::placeholder {
+  color: var(--ds-muted) !important;
+}
+html[data-dream-skin="active"] [role="dialog"][data-slot="popover-content"] [data-composer-navigation-target],
+html[data-dream-skin="active"] button[data-slot="popover-trigger"]:is([aria-label="配置本地环境"], [aria-label="Configure local environment"]) {
+  color: var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] [role="dialog"][data-slot="popover-content"] [data-composer-navigation-target]:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible, [data-state="open"]),
+html[data-dream-skin="active"] button[data-slot="popover-trigger"]:is([aria-label="配置本地环境"], [aria-label="Configure local environment"]):is(:hover, :focus-visible, [data-state="open"]) {
+  background: var(--yuuka-work-selected) !important;
+}
+
+/* Current goal strip has no dedicated data attribute. Anchor to its direct
+   native action group, not to an ancestor containing arbitrary goal text.
+   Keep native min-width, truncation, button sizes and elapsed-time updates. */
+html[data-dream-skin="active"] div.group.flex.min-w-0.items-center.justify-between:has(> div.shrink-0 > button:is([aria-label="编辑目标"], [aria-label="Edit goal"])) {
+  background: linear-gradient(100deg, var(--yuuka-work-tint), transparent 80%), var(--yuuka-work-float) !important;
+  border-radius: 7px 11px 0 0;
+  box-shadow: inset 3px 0 var(--ds-cyan), inset 0 1px var(--yuuka-work-edge);
+}
+html[data-dream-skin="active"] div.group.flex.min-w-0.items-center.justify-between:has(> div.shrink-0 > button:is([aria-label="编辑目标"], [aria-label="Edit goal"])) .text-codex-description {
+  color: var(--ds-muted) !important;
+}
+html[data-dream-skin="active"] div.group.flex.min-w-0.items-center.justify-between:has(> div.shrink-0 > button:is([aria-label="编辑目标"], [aria-label="Edit goal"])) > button > span:first-child,
+html[data-dream-skin="active"] div.group.flex.min-w-0.items-center.justify-between:has(> div.shrink-0 > button:is([aria-label="编辑目标"], [aria-label="Edit goal"])) > div.shrink-0 > button {
+  color: var(--ds-cyan) !important;
+}
+html[data-dream-skin="active"] div.group.flex.min-w-0.items-center.justify-between:has(> div.shrink-0 > button:is([aria-label="编辑目标"], [aria-label="Edit goal"])) > div.shrink-0 > button:not(:disabled):not([aria-disabled="true"]):is(:hover, :focus-visible) {
+  background: var(--yuuka-work-selected) !important;
+}
+
+/* Workspace decorates the native project heading without replacing its
+   label, expand/collapse control, or neighboring project actions. */
+html[data-dream-skin="active"] [data-yuuka-workspace-title]::after {
+  content: "SCHALE WORKSPACE";
+  display: inline-block;
+  min-width: 0;
+  max-width: 116px;
+  margin-inline-start: 7px;
+  overflow: hidden;
+  color: var(--ds-muted);
+  font: 650 8px/1.4 "Segoe UI", sans-serif;
+  letter-spacing: .75px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+  pointer-events: none;
+}
+
+/* The home workdesk follows the mission deck in normal document flow.
+   Use the theme palette for day/night and keep all controls local to it. */
+html[data-dream-skin="active"] #codex-yuuka-workdesk {
+  width: min(960px, 100%);
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0 auto 18px;
+  padding: 0 12px;
+  flex: 0 0 auto;
+  align-self: center;
+  color: var(--ds-text);
+  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  text-align: left;
+}
+html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) #codex-yuuka-workdesk,
+html[data-dream-skin="active"] #codex-yuuka-workdesk[hidden] { display: none !important; }
+html[data-dream-skin="active"] #codex-yuuka-workdesk *,
+html[data-dream-skin="active"] #codex-yuuka-workdesk *::before,
+html[data-dream-skin="active"] #codex-yuuka-workdesk *::after { box-sizing: border-box; }
+html[data-dream-skin="active"] .yuuka-workdesk-grid {
+  display: grid;
+  grid-template-columns: minmax(0, .85fr) minmax(0, 1.65fr);
+  align-items: stretch;
+  gap: 12px;
+  min-width: 0;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk :is(.yuuka-memo, .yuuka-plan) {
+  min-width: 0;
+  padding: 16px 18px;
+  border: 1px solid var(--yuuka-work-edge);
+  border-top: 2px solid var(--ds-cyan);
+  border-radius: 4px 16px 4px 4px;
+  background: linear-gradient(135deg, var(--yuuka-work-tint), transparent 64%), rgb(var(--ds-panel-rgb) / .96);
+  box-shadow: 0 2px 0 rgb(var(--ds-accent-rgb) / .08);
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk :is(.yuuka-memo, .yuuka-plan) > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 5px 12px;
+  margin: 0 0 12px;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-desk-kicker {
+  flex: 0 0 100%;
+  color: var(--ds-cyan);
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1.5;
+  letter-spacing: 1.5px;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk h2 {
+  min-width: 0;
+  margin: 0;
+  color: var(--ds-text);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-memo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-memo-copy {
+  margin: 0 0 14px;
+  color: var(--ds-text);
+  font-size: 13px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-memo-copy p { margin: 0; }
+html[data-dream-skin="active"] #codex-yuuka-workdesk button {
+  flex-shrink: 0;
+  min-height: 30px;
+  border: 1px solid var(--yuuka-work-edge);
+  border-radius: 5px 9px 5px 5px;
+  padding: 5px 10px;
+  color: var(--ds-cyan);
+  background: rgb(var(--ds-panel-rgb));
+  font: 600 12px/1.5 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk button:not(:disabled):hover {
+  border-color: var(--ds-cyan);
+  background: var(--yuuka-work-selected);
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-memo-refresh {
+  margin-top: auto;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-count {
+  flex-shrink: 0;
+  margin-inline-start: auto;
+  color: var(--ds-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-form {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-form input[type="text"] {
+  flex: 1 1 0;
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--yuuka-work-edge);
+  border-radius: 5px;
+  color: var(--ds-text);
+  background: rgb(var(--ds-panel-2-rgb) / .88);
+  box-shadow: none;
+  font: 400 12px/1.5 "Segoe UI", "Microsoft YaHei UI", sans-serif;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-form input::placeholder { color: var(--ds-muted); opacity: 1; }
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-form button { min-width: 52px; background: var(--yuuka-work-tint); }
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-status {
+  min-height: 17px;
+  margin: 5px 0 2px;
+  color: var(--ds-muted);
+  font-size: 10px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-list {
+  display: grid;
+  gap: 2px;
+  max-height: 172px;
+  margin: 0;
+  padding: 0 3px 0 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--ds-accent-rgb) / .3) transparent;
+  list-style: none;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 5px 0;
+  border-top: 1px solid rgb(var(--ds-accent-rgb) / .10);
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-item label {
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 0;
+  cursor: pointer;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-item input[type="checkbox"] {
+  appearance: auto;
+  flex: 0 0 15px;
+  width: 15px;
+  height: 15px;
+  margin: 2px 0 0;
+  padding: 0;
+  accent-color: var(--ds-cyan);
+  cursor: pointer;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-text {
+  min-width: 0;
+  color: var(--ds-text);
+  font-size: 12px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-item input:checked + .yuuka-plan-text {
+  color: var(--ds-muted);
+  text-decoration: line-through;
+  text-decoration-color: rgb(var(--ds-accent-rgb) / .5);
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-delete {
+  min-width: 30px;
+  padding: 4px 6px;
+  border-color: transparent;
+  color: var(--ds-muted);
+  background: transparent;
+  font-size: 11px;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-empty {
+  margin: 4px 0 0;
+  padding: 8px 0;
+  color: var(--ds-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+@container home-main-content (max-width: 640px) {
+  html[data-dream-skin="active"] .yuuka-workdesk-grid { grid-template-columns: minmax(0, 1fr); }
+  html[data-dream-skin="active"] #codex-yuuka-workdesk :is(.yuuka-memo, .yuuka-plan) { padding: 13px 14px; }
+  html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-memo-copy { margin-bottom: 10px; }
+}
+@media (max-width: 640px) {
+  html[data-dream-skin="active"] .yuuka-workdesk-grid { grid-template-columns: minmax(0, 1fr); }
+}
+/* Keep the expanded home in document flow. Native welcome/suggestion slots
+   reserve space for a much smaller hero; that space must not accumulate with
+   the workdesk or vary with the number of project suggestions. */
+html[data-dream-skin="active"] [class~="group/home-composer-layout"]:has(#codex-yuuka-workdesk) {
+  --yuuka-home-section-gap: clamp(10px, 1.4vh, 20px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-top: clamp(8px, 1vh, 16px);
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+}
+html[data-dream-skin="active"] [class~="group/home-composer-layout"] .relative.flex.items-end.justify-center.min-h-fit.grow.basis-0:has(#codex-yuuka-workdesk) {
+  flex: 0 1 auto;
+  min-height: 0;
+  align-items: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-bottom: 0;
+  margin-bottom: var(--yuuka-home-section-gap);
+}
+html[data-dream-skin="active"] [class~="group/home-composer-layout"]:has(#codex-yuuka-workdesk) > .contents > .flex.flex-col.min-h-fit.grow.basis-0 {
+  flex: 0 0 auto;
+  min-height: 0;
+}
+/* The native slot above the composer used to pull back into the welcome's
+   96px reservation. With content-based sizing it needs no negative offset. */
+html[data-dream-skin="active"] [class~="group/home-composer-layout"]:has(#codex-yuuka-workdesk) [class~="-mt-16"] {
+  margin-top: 0;
+}
+/* Some project/home variants place suggestions below the hero with top-full.
+   Let that exact slot contribute its height, including asynchronously loaded
+   suggestions; preserve its original nodes and event handlers. */
+html[data-dream-skin="active"] [class~="group/home-composer-layout"] .relative.flex:has(#codex-yuuka-workdesk):has(> .absolute.top-full) {
+  flex-direction: column;
+}
+html[data-dream-skin="active"] [class~="group/home-composer-layout"] .relative.flex:has(#codex-yuuka-workdesk) > .absolute.top-full {
+  position: static;
+  inset: auto;
+  margin-top: var(--yuuka-home-section-gap);
+}
+html[data-dream-skin="active"] [class~="group/home-composer-layout"] .relative.flex:has(#codex-yuuka-workdesk) > .absolute.top-full:empty {
+  margin-top: 0;
+}
+html[data-dream-skin="active"] [class~="group/home-composer-layout"]:has(#codex-yuuka-workdesk) [class~="group/home-suggestions"] .flex.flex-col.min-h-32 {
+  min-height: 0;
+  padding-block: 0;
+  padding-inline-start: 0;
+}
+html[data-dream-skin="active"] [class~="group/home-composer-layout"] #codex-yuuka-workdesk {
+  margin-bottom: 0;
+}
+html[data-dream-skin="active"] #codex-yuuka-workdesk .yuuka-plan-status[data-error="true"] {
+  color: var(--ds-text);
+  font-weight: 600;
+}
+@media (max-height: 1100px) {
+  html[data-dream-skin="active"] div:has(> #codex-yuuka-home-greeting):has(> #codex-yuuka-workdesk) { gap: 10px; }
+  html[data-dream-skin="active"] .yuuka-task-deck:has(+ #codex-yuuka-workdesk) { margin-block: 10px 0; }
+  html[data-dream-skin="active"] #codex-yuuka-home-greeting { padding-block: 2px; }
+  html[data-dream-skin="active"] #codex-yuuka-home-greeting::before { margin-bottom: 4px; }
+  html[data-dream-skin="active"] #codex-yuuka-home-greeting::after { margin-top: 6px; }
+}

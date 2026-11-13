@@ -1,4 +1,4 @@
-. (Join-Path $PSScriptRoot 'config-utf8.ps1')
+﻿. (Join-Path $PSScriptRoot 'config-utf8.ps1')
 
 $script:DreamSkinStartResultCategories = @(
   'none',
@@ -191,9 +191,9 @@ function Enter-DreamSkinOperationLock {
   if (-not $acquired) {
     $mutex.Dispose()
     if ($TimeoutMilliseconds -eq 0) {
-      throw 'Another Codex Dream Skin install, start, restore, or verify operation is already running.'
+      throw 'Another Codex Dream Skin Yuuka install, start, restore, or verify operation is already running.'
     }
-    throw "Another Codex Dream Skin operation did not finish within $TimeoutMilliseconds ms."
+    throw "Another Codex Dream Skin Yuuka operation did not finish within $TimeoutMilliseconds ms."
   }
   return $mutex
 }
@@ -215,6 +215,24 @@ function Test-DreamSkinPathEqual {
     return ([System.IO.Path]::GetFullPath($Left).TrimEnd('\') -ieq [System.IO.Path]::GetFullPath($Right).TrimEnd('\'))
   } catch {
     return $false
+  }
+}
+
+# Operation and AutoLaunch locks intentionally retain the upstream namespace:
+# independent products still control the same official Codex application.
+function Assert-YuukaLegacyEngineInactive {
+  param(
+    [string]$LegacyRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'),
+    [string]$LegacyStartupShortcut = (Join-Path ([Environment]::GetFolderPath('Startup')) 'Codex Dream Skin Auto Launch.lnk')
+  )
+  Assert-DreamSkinNoReparseComponents -Path $LegacyRoot
+  $backup = Join-Path $LegacyRoot 'config.before-dream-skin.toml'
+  Assert-DreamSkinNoReparseComponents -Path $backup
+  if (Test-Path -LiteralPath $backup) {
+    throw '旧版 Dream Skin 仍管理着 Codex 外观。请先在旧版中关闭自动接管并恢复原生外观，再安装或启动优香版；旧主题会保留。'
+  }
+  if ($LegacyStartupShortcut -and (Test-Path -LiteralPath $LegacyStartupShortcut)) {
+    throw '旧版 Dream Skin 的自动接管仍已启用。请先在旧版中关闭自动接管，再启用优香版，避免两个启动器争抢 Codex。'
   }
 }
 
@@ -295,7 +313,7 @@ function Test-DreamSkinPathWithin {
 }
 
 function Get-DreamSkinRuntimeEnginePaths {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
   $root = Join-Path ([System.IO.Path]::GetFullPath($StateRoot)) 'engine'
   $scripts = Join-Path $root 'scripts'
   return [pscustomobject]@{
@@ -316,12 +334,12 @@ function Get-DreamSkinRuntimeEnginePaths {
 }
 
 function Get-DreamSkinWindowEffectsPath {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
   return Join-Path ([System.IO.Path]::GetFullPath($StateRoot)) 'window-effects.json'
 }
 
 function Read-DreamSkinWindowEffects {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
   $path = Get-DreamSkinWindowEffectsPath -StateRoot $StateRoot
   if (-not (Test-Path -LiteralPath $path)) {
     return [pscustomobject]@{
@@ -373,7 +391,7 @@ function Read-DreamSkinWindowEffects {
 function Write-DreamSkinWindowEffects {
   param(
     [Parameter(Mandatory = $true)][ValidateSet('system', 'acrylic')][string]$WindowMaterial,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $fullStateRoot = [System.IO.Path]::GetFullPath($StateRoot)
   Ensure-DreamSkinManagedDirectory -Path $fullStateRoot -Root $fullStateRoot
@@ -424,7 +442,7 @@ function Get-DreamSkinAcrylicEnvironment {
 
 function Test-DreamSkinTrayActive {
   $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-  $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkin.$sid.Tray")
+  $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkinYuuka.$sid.Tray")
   $acquired = $false
   try {
     try { $acquired = $mutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] {
@@ -488,7 +506,7 @@ function Stop-DreamSkinTrayProcess {
 }
 
 function Stop-DreamSkinThemeManagerProcess {
-  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'))
+  param([string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'))
 
   $engine = Get-DreamSkinRuntimeEnginePaths -StateRoot $StateRoot
   $manager = Join-Path $engine.Root 'assets\theme-manager\DreamSkin.ThemeManager.exe'
@@ -518,7 +536,7 @@ function Enter-DreamSkinThemeManagerMaintenance {
   # Hold the same single-instance mutex through replacement, so a shortcut
   # cannot reopen the old executable between the close and the atomic swap.
   $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-  $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkin.$sid.ThemeManager")
+  $mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkinYuuka.$sid.ThemeManager")
   try {
     $acquired = $false
     try { $acquired = $mutex.WaitOne(0) } catch [System.Threading.AbandonedMutexException] { $acquired = $true }
@@ -576,7 +594,8 @@ function Install-DreamSkinRuntimeEngine {
   $engine = Get-DreamSkinRuntimeEnginePaths -StateRoot $fullStateRoot
   $required = @(
     'VERSION',
-    'assets\dream-reference.jpg',
+    'assets\background.png',
+    'assets\theme.css',
     'assets\dream-skin.css',
     'assets\internet-angel-acrylic.css',
     'assets\internet-angel-extension.css',
@@ -585,6 +604,9 @@ function Install-DreamSkinRuntimeEngine {
     'assets\theme-motion.css',
     'assets\motion-settings.mjs',
     'assets\motion-payload.mjs',
+    'assets\yuuka-art.mjs',
+    'assets\yuuka-skin.css',
+    'assets\yuuka-renderer.js',
     'assets\css-predicate-cache.mjs',
     'assets\renderer-inject.js',
     'assets\safe-css-policy.json',
@@ -595,15 +617,25 @@ function Install-DreamSkinRuntimeEngine {
     'assets\retired-theme-migration.mjs',
     'assets\retired-theme-catalog.json',
     'assets\theme.json',
+    'assets\yuuka-tray.ico',
+    'assets\yuuka-tray.png',
+    'presets\yuuka-seminar\theme.json',
+    'presets\yuuka-seminar\theme.css',
+    'presets\yuuka-seminar\background.png',
+    'presets\yuuka-seminar-night\theme.json',
+    'presets\yuuka-seminar-night\theme.css',
+    'presets\yuuka-seminar-night\background.png',
     'scripts\apply-community-theme.ps1',
     'scripts\acrylic-window.ps1',
     'scripts\auto-launch-dream-skin.ps1',
+    'scripts\auto-launch-hidden.cs',
     'scripts\common-windows.ps1',
     'scripts\check-update.ps1',
     'scripts\config-utf8.ps1',
     'scripts\image-metadata.mjs',
     'scripts\injector.mjs',
     'scripts\install-dream-skin.ps1',
+    'scripts\yuuka-migration.ps1',
     'scripts\manage-auto-launch-dream-skin.ps1',
     'scripts\manage-window-effects.ps1',
     'scripts\patch-dream-skin.ps1',
@@ -627,16 +659,19 @@ function Install-DreamSkinRuntimeEngine {
     }
   }
   $internetAngelTrayAssets = @(
-    'assets\internet-angel-tray.ico',
-    'assets\internet-angel-tray.png'
+    'assets\yuuka-tray.ico',
+    'assets\yuuka-tray.png'
   )
   $internetAngelTrayAssetCount = @($internetAngelTrayAssets | Where-Object {
       Test-Path -LiteralPath (Join-Path $sourceRoot $_) -PathType Leaf
     }).Count
   if ($internetAngelTrayAssetCount -notin @(0, $internetAngelTrayAssets.Count)) {
-    throw 'Dream Skin runtime source has an incomplete Internet Angel tray icon set.'
+    throw 'Dream Skin runtime source has an incomplete Yuuka tray icon set.'
   }
   $sourceDirectories = @('assets', 'scripts')
+  if (Test-Path -LiteralPath (Join-Path $sourceRoot 'presets') -PathType Container) {
+    $sourceDirectories += 'presets'
+  }
   if ($sourceHasBundledRuntime) {
     $sourceDirectories += 'runtime'
   }
@@ -945,7 +980,8 @@ function Test-DreamSkinAutoRestartTargetProcessesSubset {
 function Get-DreamSkinRegisteredCodexProcessSnapshot {
   param(
     [Parameter(Mandatory = $true)][object[]]$RegisteredInstalls,
-    [ValidateRange(0, 2147483647)][int]$ExpectedSessionId
+    [ValidateRange(0, 2147483647)][int]$ExpectedSessionId,
+    [switch]$MainProcessOnly
   )
 
   $installs = @($RegisteredInstalls)
@@ -959,8 +995,25 @@ function Get-DreamSkinRegisteredCodexProcessSnapshot {
     try { $snapshotSessionId = [int]$currentProcess.SessionId } finally { $currentProcess.Dispose() }
   }
   $allProcesses = @(Get-CimInstance Win32_Process -Filter "Name = 'ChatGPT.exe'" -ErrorAction Stop)
+  # Empty inventory has no PID identity to re-read. Stable-zero callers still
+  # require a second independent observation after their configured interval.
+  if ($allProcesses.Count -eq 0) {
+    return [pscustomobject]@{ Processes = @(); TargetProcesses = @() }
+  }
+  if ($MainProcessOnly) {
+    foreach ($item in $allProcesses) {
+      if ([int]$item.SessionId -eq $snapshotSessionId -and [string]::IsNullOrWhiteSpace("$($item.CommandLine)")) {
+        throw 'Cannot classify an unreadable Codex command line.'
+      }
+    }
+    $allProcesses = @($allProcesses | Where-Object {
+      [int]$_.SessionId -eq $snapshotSessionId -and "$($_.CommandLine)" -notmatch '(?i)(?:^|\s)"?--type(?:=|\s)'
+    })
+    if ($allProcesses.Count -gt 1) { throw 'Automatic restart requires one unambiguous Codex main process.' }
+  }
   $registeredProcesses = @()
   $targets = @()
+  $captures = @()
   foreach ($process in $allProcesses) {
     $processId = 0
     $processSessionId = -1
@@ -999,9 +1052,38 @@ function Get-DreamSkinRegisteredCodexProcessSnapshot {
     } finally {
       if ($null -ne $processHandle) { $processHandle.Dispose() }
     }
-    $liveProcess = Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction Stop
+    $captures += [pscustomobject]@{
+      ProcessId = $processId; SessionId = $processSessionId
+      StartTime = $startTime; Install = $install
+    }
+  }
+  # Batch the second CIM observation instead of one expensive WMI round trip
+  # per renderer. Every captured PID still gets path and creation-time checks.
+  $liveById = @{}
+  foreach ($item in @(Get-CimInstance Win32_Process -Filter "Name = 'ChatGPT.exe'" -ErrorAction Stop)) {
+    if ($MainProcessOnly) {
+      if ([int]$item.SessionId -ne $snapshotSessionId) { continue }
+      if ([string]::IsNullOrWhiteSpace("$($item.CommandLine)")) { throw 'Cannot reclassify an unreadable Codex command line.' }
+      if ("$($item.CommandLine)" -match '(?i)(?:^|\s)"?--type(?:=|\s)') { continue }
+    }
+    $liveById[[int]$item.ProcessId] = $item
+  }
+  $initialIds = @($allProcesses | ForEach-Object { [int]$_.ProcessId } | Sort-Object)
+  $confirmedIds = @($liveById.Keys | Sort-Object)
+  if (($initialIds -join ',') -cne ($confirmedIds -join ',')) {
+    throw 'The Codex process set changed during automatic restart identity capture.'
+  }
+  foreach ($capture in $captures) {
+    $processId = $capture.ProcessId
+    $processSessionId = $capture.SessionId
+    $startTime = $capture.StartTime
+    $install = $capture.Install
+    $liveProcess = $liveById[$processId]
     if ($null -eq $liveProcess) {
       throw "A Codex process exited while its automatic restart identity was captured: PID $processId"
+    }
+    if ([int]$liveProcess.SessionId -ne $processSessionId) {
+      throw 'The Codex Windows session changed during identity capture.'
     }
     $livePath = Get-DreamSkinProcessExecutablePath -ProcessInfo $liveProcess
     if (-not $livePath -or
@@ -1798,12 +1880,76 @@ function Get-DreamSkinCdpBrowserIdentity {
   }
 }
 
+function Initialize-DreamSkinTcpOwnerTable {
+  if ('CodexDreamSkin.TcpOwners' -as [type]) { return }
+  Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Runtime.InteropServices;
+namespace CodexDreamSkin {
+  public sealed class TcpOwner {
+    public string LocalAddress { get; set; }
+    public int LocalPort { get; set; }
+    public uint OwningProcess { get; set; }
+  }
+  public static class TcpOwners {
+    [DllImport("iphlpapi.dll", ExactSpelling=true)]
+    static extern uint GetExtendedTcpTable(IntPtr table, ref int size,
+      [MarshalAs(UnmanagedType.Bool)] bool sorted, int family, int tableClass, uint reserved);
+    public static TcpOwner[] Read(int port) {
+      var rows = new List<TcpOwner>();
+      foreach (int family in new int[] {2, 23}) {
+        int size = 0;
+        uint result = GetExtendedTcpTable(IntPtr.Zero, ref size, false, family, 3, 0);
+        if (result != 0 && result != 122) throw new System.ComponentModel.Win32Exception((int)result);
+        bool complete = false;
+        for (int attempt = 0; attempt < 3; attempt++) {
+          if (size < 4 || size > 16777216) throw new InvalidOperationException("Invalid TCP table size");
+          int allocated = size;
+          IntPtr buffer = Marshal.AllocHGlobal(allocated);
+          try {
+            result = GetExtendedTcpTable(buffer, ref size, false, family, 3, 0);
+            if (result == 122) continue;
+            if (result != 0) throw new System.ComponentModel.Win32Exception((int)result);
+            int count = Marshal.ReadInt32(buffer);
+            int stride = family == 2 ? 24 : 56;
+            if (count < 0 || size > allocated || size < 4 || count > (size - 4) / stride)
+              throw new InvalidOperationException("Invalid TCP table bounds");
+            for (int i = 0; i < count; i++) {
+              IntPtr row = IntPtr.Add(buffer, 4 + i * stride);
+              int po = family == 2 ? 8 : 20;
+              int localPort = (Marshal.ReadByte(row, po) << 8) | Marshal.ReadByte(row, po + 1);
+              if (localPort != port) continue;
+              if (Marshal.ReadInt32(row, family == 2 ? 0 : 48) != 2)
+                throw new InvalidOperationException("Non-listener in TCP listener table");
+              byte[] address = new byte[family == 2 ? 4 : 16];
+              Marshal.Copy(IntPtr.Add(row, family == 2 ? 4 : 0), address, 0, address.Length);
+              long scope = family == 2 ? 0 : unchecked((uint)IPAddress.NetworkToHostOrder(Marshal.ReadInt32(row, 16)));
+              rows.Add(new TcpOwner {
+                LocalAddress = (family == 2 ? new IPAddress(address) : new IPAddress(address, scope)).ToString(),
+                LocalPort = localPort,
+                OwningProcess = unchecked((uint)Marshal.ReadInt32(row, family == 2 ? 20 : 52))
+              });
+            }
+            complete = true;
+            break;
+          } finally { Marshal.FreeHGlobal(buffer); }
+        }
+        if (!complete) throw new InvalidOperationException("TCP table kept changing size");
+      }
+      return rows.ToArray();
+    }
+  }
+}
+'@
+}
+
 function Get-DreamSkinPortListeners {
   param([int]$Port)
-  if (-not (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue)) {
-    throw 'Get-NetTCPConnection is required to verify CDP listener ownership.'
-  }
-  return @(Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue)
+  Initialize-DreamSkinTcpOwnerTable
+  # Fresh IPv4 and IPv6 owner evidence on every call; do not cache security data.
+  return @([CodexDreamSkin.TcpOwners]::Read($Port))
 }
 
 function Test-DreamSkinListenerOwnerAlive {
@@ -1836,7 +1982,24 @@ function Resolve-DreamSkinStartPort {
 
 function Test-DreamSkinPortAvailable {
   param([int]$Port)
-  return @(Get-DreamSkinPortListeners -Port $Port).Count -eq 0
+  if (@(Get-DreamSkinPortListeners -Port $Port).Count -gt 0) { return $false }
+  return Test-DreamSkinLoopbackPortBindable -Port $Port
+}
+
+function Test-DreamSkinLoopbackPortBindable {
+  param([ValidateRange(1024, 65535)][int]$Port)
+  # Excluded Windows ports have no listener but fail bind with WSAEACCES.
+  # Probe the same IPv4 loopback address used by Codex, without sending data.
+  $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, $Port)
+  try {
+    $probe.Server.ExclusiveAddressUse = $true
+    $probe.Start()
+    return $true
+  } catch [Net.Sockets.SocketException] {
+    return $false
+  } finally {
+    $probe.Stop()
+  }
 }
 
 function Test-DreamSkinCodexPortOwner {
@@ -1938,6 +2101,17 @@ function Get-DreamSkinVerifiedCdpIdentityForAnyRegistered {
 function Select-DreamSkinPort {
   param([int]$PreferredPort)
   for ($candidate = $PreferredPort; $candidate -le [Math]::Min(65535, $PreferredPort + 100); $candidate++) {
+    if (Test-DreamSkinPortAvailable -Port $candidate) { return $candidate }
+  }
+  # Adjacent reserved ranges can exceed the small preferred-port scan.
+  # Ask Windows for a bindable ephemeral port, then run the normal checks.
+  for ($attempt = 0; $attempt -lt 8; $attempt++) {
+    $probe = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
+    try {
+      $probe.Server.ExclusiveAddressUse = $true
+      $probe.Start()
+      $candidate = [int]$probe.LocalEndpoint.Port
+    } finally { $probe.Stop() }
     if (Test-DreamSkinPortAvailable -Port $candidate) { return $candidate }
   }
   throw "No free loopback port was found between $PreferredPort and $([Math]::Min(65535, $PreferredPort + 100))."
@@ -2148,7 +2322,7 @@ function Get-DreamSkinRecordedLegacyCdpSessionEvidence {
 function Get-DreamSkinRecordedStateSessionOwnership {
   param(
     [AllowNull()][object]$State,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   if ($null -eq $State) {
     return [pscustomobject]@{ IsLive = $false; SessionId = $null; Sources = @() }
@@ -2238,6 +2412,13 @@ function Get-DreamSkinRecordedStateSessionOwnership {
     }
   }
   if ($liveEvidence.Count -eq 0) {
+    # Modern state has already checked every recorded PID and creation time.
+    # A different process at the same executable path is a new session, not
+    # evidence that the old owner survives. Keep the legacy fallback below.
+    if ($null -ne $codexPidProperty -and $codexPidProperty.Value -and
+      $null -ne $recordedSessionId) {
+      return [pscustomobject]@{ IsLive = $false; SessionId = $recordedSessionId; Sources = @() }
+    }
     $codex = Get-DreamSkinCodexStatePathCandidate -State $State
     if ($null -ne $codex) {
       $matchingCodexProcesses = @()
@@ -2361,7 +2542,7 @@ function Stop-DreamSkinRecordedInjector {
 function Restore-DreamSkinRecordedAcrylicTarget {
   param(
     [Parameter(Mandatory = $true)][object]$State,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   $fullStateRoot = [System.IO.Path]::GetFullPath($StateRoot)
   $helper = (Get-DreamSkinRuntimeEnginePaths -StateRoot $fullStateRoot).AcrylicHelper
@@ -2461,7 +2642,7 @@ function Wait-DreamSkinAcrylicMonitorMutexAvailable {
 function Stop-DreamSkinRecordedAcrylicMonitor {
   param(
     [AllowNull()][object]$State,
-    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkin')
+    [string]$StateRoot = (Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka')
   )
   if ($null -eq $State) { return $true }
   $monitorPidProperty = $State.PSObject.Properties['acrylicMonitorPid']
@@ -2838,7 +3019,8 @@ function Stop-DreamSkinCodex {
     [AllowEmptyCollection()][int[]]$PreserveProcessIds = @(),
     [AllowNull()][object[]]$ExpectedAutoRestartTargets,
     [AllowNull()][string]$AutoRestartStateRoot,
-    [switch]$AllowForce
+    [switch]$AllowForce,
+    [switch]$MainProcessOnly
   )
   if ($PSBoundParameters.ContainsKey('ExpectedAutoRestartTargets')) {
     if (@($PreserveProcessIds).Count -gt 0) {
@@ -2867,11 +3049,21 @@ function Stop-DreamSkinCodex {
     }
 
     $registeredInstalls = @(Get-DreamSkinRegisteredCodexInstalls)
-    $snapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
-      -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId
-    if (-not (Test-DreamSkinAutoRestartTargetProcessesEqual `
-        -Reserved $expectedTargets -Current @($snapshot.TargetProcesses))) {
-      throw 'The automatic restart target process set changed before Codex shutdown; no window was closed.'
+    if ($MainProcessOnly) {
+      if ($expectedTargets.Count -ne 1) { throw 'Main-process shutdown requires exactly one reserved identity.' }
+      # Open only the reserved PID first. The fresh pre-close snapshot below
+      # verifies path, package, session, uniqueness and creation time before any
+      # window receives a close; do not pay for two adjacent full inventories.
+      $snapshot = [pscustomobject]@{
+        Processes = @([pscustomobject]@{ProcessId = [int]$expectedTargets[0].processId})
+      }
+    } else {
+      $snapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
+        -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId
+      if (-not (Test-DreamSkinAutoRestartTargetProcessesEqual `
+          -Reserved $expectedTargets -Current @($snapshot.TargetProcesses))) {
+        throw 'The automatic restart target process set changed before Codex shutdown; no window was closed.'
+      }
     }
     Assert-DreamSkinAutoRestartControlClear -StateRoot $AutoRestartStateRoot
 
@@ -2901,7 +3093,7 @@ function Stop-DreamSkinCodex {
         }
       }
       $preCloseSnapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
-        -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId
+        -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId -MainProcessOnly:$MainProcessOnly
       if (-not (Test-DreamSkinAutoRestartTargetProcessesEqual `
           -Reserved $expectedTargets -Current @($preCloseSnapshot.TargetProcesses))) {
         throw 'The automatic restart target process set changed at the final close boundary; no window was closed.'
@@ -2938,13 +3130,17 @@ function Stop-DreamSkinCodex {
       }
     }
 
-    $deadline = [DateTime]::UtcNow.AddSeconds(15)
+    # A just-opened auto-takeover main process often hides to tray instead of
+    # exiting on CloseMainWindow. Bound only that same main PID after 3s;
+    # retain the original wait for legacy full-process shutdown.
+    $gracefulWaitSeconds = if ($MainProcessOnly) { 3 } else { 15 }
+    $deadline = [DateTime]::UtcNow.AddSeconds($gracefulWaitSeconds)
     $remainingSnapshot = $null
     do {
       Assert-DreamSkinAutoRestartControlClear -StateRoot $AutoRestartStateRoot
       try {
         $remainingSnapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
-          -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId
+          -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId -MainProcessOnly:$MainProcessOnly
       } catch {
         # A reserved process may disappear between the inventory and identity
         # reads during normal shutdown. Retry, but never treat the failed read
@@ -2963,6 +3159,22 @@ function Stop-DreamSkinCodex {
         }
         return
       }
+      # Current Codex hides its window to tray on a graceful close. Once the
+      # same reserved main process has no window, waiting out the grace cannot
+      # save additional UI work. Proceed to the existing exact force gate.
+      if ($MainProcessOnly -and $AllowForce -and $gracefulCloseSignalled -and
+        @($remainingSnapshot.TargetProcesses).Count -eq 1) {
+        $trayProcess = $null
+        try {
+          $trayTarget = @($remainingSnapshot.TargetProcesses)[0]
+          $trayProcess = Get-Process -Id ([int]$trayTarget.processId) -ErrorAction Stop
+          if ($trayProcess.StartTime.ToUniversalTime().ToFileTimeUtc() -eq
+              [long]$trayTarget.startTimeFileTimeUtc -and
+              $trayProcess.MainWindowHandle -eq [IntPtr]::Zero) { break }
+        } catch {
+          # A disappearing process is checked again by the bound force gate.
+        } finally { if ($null -ne $trayProcess) { $trayProcess.Dispose() } }
+      }
       Start-Sleep -Milliseconds 250
     } while ([DateTime]::UtcNow -lt $deadline)
 
@@ -2972,7 +3184,7 @@ function Stop-DreamSkinCodex {
       Assert-DreamSkinAutoRestartControlClear -StateRoot $AutoRestartStateRoot
       try {
         $remainingSnapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
-          -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId
+          -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId -MainProcessOnly:$MainProcessOnly
         break
       } catch {
         $remainingSnapshot = $null
@@ -3018,7 +3230,7 @@ function Stop-DreamSkinCodex {
       Assert-DreamSkinAutoRestartControlClear -StateRoot $AutoRestartStateRoot
       try {
         $finalSnapshot = Get-DreamSkinRegisteredCodexProcessSnapshot `
-          -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId
+          -RegisteredInstalls $registeredInstalls -ExpectedSessionId $expectedSessionId -MainProcessOnly:$MainProcessOnly
       } catch {
         Start-Sleep -Milliseconds 100
         continue
@@ -3069,7 +3281,7 @@ function Stop-DreamSkinCodex {
 function Confirm-DreamSkinRestart {
   param([string]$Message)
   $shell = New-Object -ComObject WScript.Shell
-  return $shell.Popup($Message, 0, 'Codex Dream Skin', 52) -eq 6
+  return $shell.Popup($Message, 0, 'Codex Dream Skin Yuuka', 52) -eq 6
 }
 
 function Invoke-DreamSkinCodexWindowActivation {
