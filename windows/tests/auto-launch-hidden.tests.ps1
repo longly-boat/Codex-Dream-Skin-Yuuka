@@ -4,7 +4,23 @@ $fixture = Join-Path ([IO.Path]::GetTempPath()) ('dreamskin hidden ' + [guid]::N
 $null = New-Item -ItemType Directory -Path $fixture
 try {
   $exe = Join-Path $fixture 'auto-launch-hidden.exe'
-  Add-Type -TypeDefinition ([IO.File]::ReadAllText((Join-Path $Root 'scripts\auto-launch-hidden.cs'))) -OutputAssembly $exe -OutputType WindowsApplication
+  $source = [IO.Path]::GetFullPath((Join-Path $Root 'scripts\auto-launch-hidden.cs'))
+  if ($PSVersionTable.PSEdition -eq 'Core') {
+    # PowerShell 7 Add-Type cannot emit executable assemblies. Compile the
+    # real .NET Framework GUI launcher with the same Windows compiler used
+    # by installation, then retain all launch/PE checks in this test host.
+    $compileScript = Join-Path $fixture 'compile-bootstrap.ps1'
+    [IO.File]::WriteAllText($compileScript, @'
+param([string]$Source, [string]$Destination)
+$ErrorActionPreference = 'Stop'
+Add-Type -TypeDefinition ([IO.File]::ReadAllText($Source)) -OutputAssembly $Destination -OutputType WindowsApplication
+'@)
+    $windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    & $windowsPowerShell -NoProfile -ExecutionPolicy RemoteSigned -File $compileScript -Source $source -Destination $exe
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $exe -PathType Leaf)) { throw 'GUI bootstrap compilation failed.' }
+  } else {
+    Add-Type -TypeDefinition ([IO.File]::ReadAllText($source)) -OutputAssembly $exe -OutputType WindowsApplication
+  }
   $probe = @'
 param([switch]$TakeOverStartupSession)
 Add-Type -TypeDefinition 'using System; using System.Runtime.InteropServices; public static class ConsoleProbe { [DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); }'

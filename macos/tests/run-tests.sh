@@ -255,11 +255,15 @@ if /usr/bin/cmp -s "$ROOT/assets/dream-skin.css" "$PROJECT_ROOT/windows/assets/d
   printf 'The Windows Choten runtime overlay was replaced by the canonical macOS runtime.\n' >&2
   exit 1
 fi
-if /usr/bin/grep -E -q 'getBoundingClientRect|ResizeObserver|classList\.(add|remove|toggle)|syncRouteState|samplingNativeShell' \
+if /usr/bin/grep -E -q 'ResizeObserver|classList\.(add|remove|toggle)|syncRouteState|samplingNativeShell' \
     "$ROOT/assets/renderer-inject.js"; then
   printf 'Unified renderer still contains retired layout/class behavior.\n' >&2
   exit 1
 fi
+# Geometry is allowed only when a Home card is explicitly clicked, to reject
+# hidden native composers. The shared runtime test checks that exact boundary,
+# both click handlers, and zero layout reads during automatic classification.
+"$NODE" "$ROOT/tests/renderer-inject.test.mjs"
 if /usr/bin/grep -E -q 'home-suggestion-list-item|\.dream-skin-home|\.dream-home|\.dream-task|codex-dream-skin-chrome' \
     "$ROOT/assets/dream-skin.css"; then
   printf 'Canonical CSS still contains retired marker classes or fossil selectors.\n' >&2
@@ -276,7 +280,6 @@ fi
 "$NODE" "$ROOT/tests/injector-bootstrap.test.mjs"
 "$NODE" "$ROOT/tests/injector-session.test.mjs"
 "$NODE" "$ROOT/tests/window-readiness.test.mjs"
-"$NODE" "$ROOT/tests/renderer-inject.test.mjs"
 "$NODE" "$ROOT/tests/renderer-verification.test.mjs"
 "$NODE" "$ROOT/tests/safe-css-validator.test.mjs"
 "$NODE" "$ROOT/tests/theme-stage.test.mjs"
