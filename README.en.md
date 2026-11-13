@@ -16,7 +16,7 @@ Their theme injection engine, package and Safe CSS validation, Windows installer
 
 We also thank the earlier [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin) project and its contributors. Original copyright notices and licenses are retained. See [credits and sources](CREDITS.md).
 
-![Yuuka wallpaper](yuuka/background.png)
+![Yuuka theme home screenshot](yuuka/home-preview.png)
 
 ## Features
 

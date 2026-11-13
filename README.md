@@ -16,7 +16,7 @@
 
 同时感谢更早的 [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Away/Codex-Dream-Skin) 与其他上游贡献者。保留原有版权、MIT 许可证及素材来源说明；详见 [致谢与来源](CREDITS.md)。
 
-![优香主题壁纸](yuuka/background.png)
+![优香主题主页实机截图](yuuka/home-preview.png)
 
 ## 功能
 
