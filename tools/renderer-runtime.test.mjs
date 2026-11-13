@@ -10,7 +10,7 @@ const messageSelector = ':is([data-message-author-role], [data-local-conversatio
 const composerSelector = ':is(.composer-surface-chrome, [class*="_ComposerLayoutRoot_"], [data-composer-surface-variant][data-composer-radius-variant])';
 const composerToolbarSelector = ':is(.composer-surface-chrome [class*="_footer_"], [class*="_ComposerLayoutRoot_"] [class*="_ComposerLayoutFooter_"], [data-composer-surface-variant][data-composer-radius-variant] :is([data-composer-footer-responsive], [class*="_ComposerLayoutFooter_"], [class*="_footer_"]))';
 const composerEditorSelector = `${composerSelector} .ProseMirror[contenteditable="true"], ` +
-  `${composerSelector} [contenteditable="true"]`;
+  `${composerSelector} [contenteditable="true"], ${composerSelector} textarea`;
 const genericComposerOwnerSelector = '[data-testid*="composer" i], [data-testid*="prompt" i], ' +
   '[class*="composer" i], [class*="prompt" i]';
 
@@ -97,6 +97,10 @@ function makeFixture({
       addEventListener(type, callback) { nodeListeners.set(type, callback); },
       dispatchEvent(event) { node.lastEvent = event; return true; },
       focus() { node.focusCount = (node.focusCount || 0) + 1; },
+      getBoundingClientRect() {
+        node.layoutReads = (node.layoutReads || 0) + 1;
+        return { width: 320, height: 80 };
+      },
       replaceChildren(...children) {
         for (const child of node.children) child.parentElement = null;
         node.children = [];
@@ -540,7 +544,21 @@ export async function runRendererRuntimeTest(assetRoot) {
   assert.doesNotMatch(template, /electron-opaque|home-suggestion-list-item/,
     "Runtime payload must not carry retired selector documentation/fossils.");
   assert.doesNotMatch(template, /classList\.(add|remove|toggle)/);
-  assert.doesNotMatch(template, /getBoundingClientRect|ResizeObserver/);
+  // Only an explicit Home-card click measures candidate editors to avoid
+  // filling a hidden native composer. Automatic rendering remains layout-free.
+  const presetWriterStart = template.indexOf("  const writeHomePreset = (prompt) => {");
+  const presetWriterEnd = template.indexOf("\n  const yuukaPlanStore =", presetWriterStart);
+  assert.ok(presetWriterStart >= 0 && presetWriterEnd > presetWriterStart,
+    "The user-triggered composer writer must have an isolated boundary.");
+  const automaticRenderer = template.slice(0, presetWriterStart) + template.slice(presetWriterEnd);
+  assert.doesNotMatch(automaticRenderer, /getBoundingClientRect|ResizeObserver/,
+    "Automatic classification and observer passes must not read layout.");
+  assert.doesNotMatch(template, /ResizeObserver/);
+  const presetCalls = template.match(/writeHomePreset\(/g) || [];
+  const clickOnlyCalls = template.match(/button\.addEventListener\("click", \(\) => writeHomePreset\(preset\.prompt\)\);/g) || [];
+  assert.equal(presetCalls.length, 2, "Only the two theme-specific Home card handlers may fill a composer.");
+  assert.equal(clickOnlyCalls.length, presetCalls.length,
+    "Composer visibility measurements must stay inside explicit card clicks.");
   assert.match(template, /childList:\s*true/);
   assert.match(template, /subtree:\s*true/);
   // The new contract intentionally keeps the `data-dream-*` attribute names
@@ -1249,9 +1267,18 @@ export async function runRendererRuntimeTest(assetRoot) {
   const modernDeck = modernComposerHome.nodes.get("chatgpt-internet-angel-deck");
   const modernPresetButton = modernDeck?.querySelectorAll("button.angel-preset-card")?.[0];
   assert.equal(typeof modernPresetButton?.listeners?.get("click"), "function");
+  assert.equal(modernComposerHome.partFixtures.composerEditor.layoutReads || 0, 0,
+    "Rendering the Home deck must not measure the native composer.");
   modernPresetButton.listeners.get("click")();
   assert.notEqual(modernComposerHome.partFixtures.composerEditor.textContent, "",
     "A preset card must write through the new data-attribute-only composer contract.");
+  assert.ok(modernComposerHome.partFixtures.composerEditor.layoutReads > 0,
+    "The explicit card click must confirm the native composer is visible.");
+  modernComposerHome.partFixtures.composerEditor.textContent = "";
+  modernComposerHome.partFixtures.composerEditor.getBoundingClientRect = () => ({ width: 0, height: 0 });
+  modernPresetButton.listeners.get("click")();
+  assert.equal(modernComposerHome.partFixtures.composerEditor.textContent, "",
+    "A card must not fill a hidden native composer.");
   assert.equal(modernComposerHome.window.__CODEX_DREAM_SKIN_STATE__.cleanup(), true);
 
   const namedCustomHome = makeFixture({ nativeAppearance: "dark", homeDeck: true });

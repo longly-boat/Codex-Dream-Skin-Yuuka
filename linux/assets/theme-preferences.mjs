@@ -4,7 +4,7 @@ import path from "node:path";
 
 export function themePreferencesPath(platform = process.platform, env = process.env, home = os.homedir()) {
   const stateRoot = platform === "win32"
-    ? path.join(env.LOCALAPPDATA || path.join(home, "AppData", "Local"), "CodexDreamSkin")
+    ? path.join(env.LOCALAPPDATA || path.join(home, "AppData", "Local"), "CodexDreamSkinYuuka")
     : platform === "linux"
       ? path.join(env.XDG_STATE_HOME || path.join(home, ".local", "state"), "CodexDreamSkin")
       : path.join(home, "Library", "Application Support", "CodexDreamSkinStudio");

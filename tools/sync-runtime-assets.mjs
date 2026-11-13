@@ -143,6 +143,10 @@ const sourceImageMetadata = await fs.readFile(
 );
 const outputs = [
   {
+    content: await fs.readFile(path.join(projectRoot, "runtime", "yuuka-skin.css"), "utf8"),
+    paths: ["windows/assets/yuuka-skin.css", "macos/assets/yuuka-skin.css", "linux/assets/yuuka-skin.css"],
+  },
+  {
     content: await fs.readFile(path.join(projectRoot, "runtime", "theme-preferences.mjs"), "utf8"),
     paths: ["macos/assets/theme-preferences.mjs", "windows/assets/theme-preferences.mjs", "linux/assets/theme-preferences.mjs"],
   },
@@ -150,7 +154,7 @@ const outputs = [
     content: await fs.readFile(path.join(projectRoot, "runtime", name), "utf8"),
     paths: ["macos", "windows", "linux"].map((platform) => `${platform}/assets/${name}`),
   }))),
-  ...await Promise.all(["theme-motion.css", "theme-motion.js", "motion-settings.mjs", "motion-payload.mjs"].map(async (name) => ({
+  ...await Promise.all(["theme-motion.css", "theme-motion.js", "motion-settings.mjs", "motion-payload.mjs", "yuuka-art.mjs"].map(async (name) => ({
     content: await fs.readFile(path.join(projectRoot, "runtime", name), "utf8"),
     paths: ["macos", "windows", "linux"].map((platform) => `${platform}/assets/${name}`),
   }))),
@@ -173,7 +177,7 @@ const outputs = [
   },
   {
     content: compileRuntime(sourceRuntime),
-    paths: ["macos/assets/renderer-inject.js"],
+    paths: ["macos/assets/renderer-inject.js", "windows/assets/yuuka-renderer.js"],
   },
   {
     content: sourceInternetAngelExtensionCss,

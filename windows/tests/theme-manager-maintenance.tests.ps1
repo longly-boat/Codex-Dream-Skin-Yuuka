@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
@@ -105,7 +105,7 @@ public static class DreamSkinMaintenanceMutexProbe {
 '@
   }
   $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-  $mutexName = "Local\CodexDreamSkin.$sid.ThemeManager"
+  $mutexName = "Local\CodexDreamSkinYuuka.$sid.ThemeManager"
   $maintenance = Enter-DreamSkinThemeManagerMaintenance
   try {
     Check (-not [DreamSkinMaintenanceMutexProbe]::CanAcquire($mutexName)) 'Maintenance prevents a second thread from starting the manager'

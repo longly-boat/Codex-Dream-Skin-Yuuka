@@ -32,10 +32,19 @@ function Write-RetiredFixturePack([string]$Directory, [string]$Id, [string]$Name
 
 try {
   New-Item -ItemType Directory -Path $assets -Force | Out-Null
-  foreach ($file in @('theme.json', 'dream-reference.jpg')) {
+  foreach ($file in @('theme.json', 'background.png', 'theme.css', 'dream-reference.jpg')) {
     Copy-Item -LiteralPath (Join-Path $Root "assets\$file") -Destination (Join-Path $assets $file)
   }
-  $retained = (Read-DreamSkinUtf8File -Path (Join-Path $assets 'theme.json')) | ConvertFrom-Json
+  Copy-Item -LiteralPath (Join-Path $Root 'presets') -Destination (Join-Path $engine 'presets') -Recurse
+  # Initializing Yuuka must seed its own presets without running the old
+  # retirement policy. Test that legacy policy separately with its reviewed
+  # retained identity; do not weaken its hard-coded catalog validation.
+  $reviewedCatalog = (Read-DreamSkinUtf8File -Path (Join-Path $Root 'assets\retired-theme-catalog.json')) | ConvertFrom-Json
+  $retained = $reviewedCatalog.retained.theme
+  $legacyDefault = Join-Path $assets 'legacy-default'
+  New-Item -ItemType Directory -Path $legacyDefault | Out-Null
+  Write-DreamSkinUtf8FileAtomically -Path (Join-Path $legacyDefault 'theme.json') -Content ($retained | ConvertTo-Json -Depth 16)
+  Copy-Item -LiteralPath (Join-Path $assets 'dream-reference.jpg') -Destination (Join-Path $legacyDefault 'dream-reference.jpg')
   $script:retiredFixtureTemplate = $retained | ConvertTo-Json -Depth 12 | ConvertFrom-Json
   $script:retiredFixtureTemplate.id = 'preset-retired-fixture'
   $script:retiredFixtureTemplate.name = 'Pixel Cafe'
@@ -55,12 +64,13 @@ try {
   $shim = @'
 import fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 const { migrateRetiredThemes } = await import(pathToFileURL(__REAL_MODULE__).href);
 const args = process.argv.slice(2);
 const value = name => args[args.indexOf(name) + 1];
 const catalog = JSON.parse(fs.readFileSync(new URL('./retired-theme-catalog.json', import.meta.url), 'utf8'));
 try {
-  const result = await migrateRetiredThemes({stateRoot:value('--state-root'), activeName:value('--active-name'), defaultThemeDir:value('--default-theme-dir'), catalog});
+  const result = await migrateRetiredThemes({stateRoot:value('--state-root'), activeName:value('--active-name'), defaultThemeDir:fileURLToPath(new URL('./legacy-default/', import.meta.url)), catalog});
   console.log(JSON.stringify(result));
 } catch { console.error('fixture migration failed'); process.exitCode = 1; }
 '@
@@ -78,9 +88,9 @@ try {
   [System.IO.File]::WriteAllText((Join-Path $cssDirectory 'theme.css'), '[data-ds-part="root"] { color: #ff45c8; }', $utf8)
   $activeTheme = $script:retiredFixtureTemplate | ConvertTo-Json -Depth 12 | ConvertFrom-Json
   $null = Set-DreamSkinActiveTheme -ImagePath (Join-Path $retiredDirectory 'old.jpg') -Theme $activeTheme -StateRoot $stateRoot
-  # The first initialization only seeds this isolated fixture. Remove its marker
-  # to represent an existing v1.7.1 installation that has never been migrated.
-  Remove-Item -LiteralPath (Join-Path $stateRoot '.retired-theme-migration-1.7.2.json') -Force
+  if (Test-Path -LiteralPath (Join-Path $stateRoot '.retired-theme-migration-1.7.2.json')) {
+    throw 'Yuuka initialization must not run the legacy retirement policy.'
+  }
   $beforeActive = Get-RetiredFixtureHashes $paths.Active
   $beforeRetired = Get-RetiredFixtureHashes $retiredDirectory
   $beforeRenamed = Get-RetiredFixtureHashes $renamedDirectory
@@ -113,7 +123,7 @@ public sealed class DreamSkinRetiredMigrationMutexHolder : IDisposable {
 '@
   }
   $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-  $holder = [DreamSkinRetiredMigrationMutexHolder]::new("Local\CodexDreamSkin.$sid.ThemeImport")
+  $holder = [DreamSkinRetiredMigrationMutexHolder]::new("Local\CodexDreamSkinYuuka.$sid.ThemeImport")
   try {
     if (-not $holder.Acquired) { throw 'The native ThemeImport collision fixture could not acquire its mutex.' }
     $rejected = $false
@@ -129,11 +139,18 @@ public sealed class DreamSkinRetiredMigrationMutexHolder : IDisposable {
   } finally { $holder.Dispose() }
 
   $null = Initialize-DreamSkinThemeStore -SkillRoot $engine -StateRoot $stateRoot
+  if ((Get-RetiredFixtureHashes $paths.Active) -cne $beforeActive -or
+    (Get-RetiredFixtureHashes $retiredDirectory) -cne $beforeRetired -or
+    (Get-RetiredFixtureHashes $renamedDirectory) -cne $beforeRenamed -or
+    (Test-Path -LiteralPath (Join-Path $stateRoot 'retired-themes'))) {
+    throw 'Yuuka initialization unexpectedly applied the old retirement policy.'
+  }
+  Invoke-DreamSkinRetiredThemeMigration -SkillRoot $engine -StateRoot $stateRoot
   $active = Read-DreamSkinTheme -ThemeDirectory $paths.Active
   $saved = @(Get-DreamSkinSavedThemes -StateRoot $stateRoot)
-  if ($active.Theme.id -cne 'preset-internet-angel-default' -or $saved.Count -ne 3 -or
+  if ($active.Theme.id -cne 'preset-internet-angel-default' -or $saved.Count -ne 4 -or
     (Test-Path -LiteralPath $retiredDirectory) -or (Test-Path -LiteralPath $renamedDirectory)) {
-    throw 'Initialization did not replace the retired active theme and remove matching retired entries from tray discovery.'
+    throw 'Explicit migration did not replace the retired active theme and remove matching retired entries from tray discovery.'
   }
   if ((Get-RetiredFixtureHashes $customDirectory) -cne $beforeCustom -or
     (Get-RetiredFixtureHashes $cssDirectory) -cne $beforeCss) {
@@ -151,13 +168,22 @@ public sealed class DreamSkinRetiredMigrationMutexHolder : IDisposable {
     throw 'Retired theme backups did not retain the exact old active and saved files.'
   }
   $afterMigration = Get-RetiredFixtureHashes $stateRoot
+  Invoke-DreamSkinRetiredThemeMigration -SkillRoot $engine -StateRoot $stateRoot
   $null = Initialize-DreamSkinThemeStore -SkillRoot $engine -StateRoot $stateRoot
   if ((Get-RetiredFixtureHashes $stateRoot) -cne $afterMigration -or
     @(Get-ChildItem -LiteralPath (Join-Path $stateRoot 'retired-themes') -Directory).Count -ne 1) {
-    throw 'Repeated initialization changed the migrated state or created another backup.'
+    throw 'Repeated explicit migration or initialization changed the migrated state or created another backup.'
   }
   Write-Host 'Retired-theme migration native integration tests passed.'
 } finally {
   if ($operation) { Exit-DreamSkinOperationLock -Mutex $operation }
-  if (Test-Path -LiteralPath $fixture) { Remove-Item -LiteralPath $fixture -Recurse -Force }
+  if (Test-Path -LiteralPath $fixture) {
+    $fullFixture = [IO.Path]::GetFullPath($fixture)
+    $tempPrefix = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\') + '\'
+    if (-not $fullFixture.StartsWith($tempPrefix, [StringComparison]::OrdinalIgnoreCase) -or
+      [IO.Path]::GetFileName($fullFixture) -notlike 'dreamskin-retired-migration-*') { throw 'Unsafe fixture cleanup path.' }
+    Assert-DreamSkinNoReparseComponents -Path $fullFixture
+    foreach ($entry in Get-ChildItem -LiteralPath $fullFixture -Recurse -Force) { Assert-DreamSkinNoReparseComponents -Path $entry.FullName }
+    Remove-Item -LiteralPath $fullFixture -Recurse -Force
+  }
 }

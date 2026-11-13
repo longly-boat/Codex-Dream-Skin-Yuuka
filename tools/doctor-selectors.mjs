@@ -174,7 +174,7 @@ async function stateFilePorts() {
   if (process.platform === "darwin") {
     files.push(path.join(os.homedir(), "Library/Application Support/CodexDreamSkinStudio/state.json"));
   } else if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    files.push(path.join(process.env.LOCALAPPDATA, "CodexDreamSkin", "state.json"));
+    files.push(path.join(process.env.LOCALAPPDATA, "CodexDreamSkinYuuka", "state.json"));
   }
   const ports = [];
   for (const file of files) {

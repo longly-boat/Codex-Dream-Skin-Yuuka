@@ -349,7 +349,7 @@ async function stateFilePorts() {
   if (process.platform === "darwin") {
     files.push(path.join(os.homedir(), "Library/Application Support/CodexDreamSkinStudio/state.json"));
   } else if (process.platform === "win32" && process.env.LOCALAPPDATA) {
-    const root = path.join(process.env.LOCALAPPDATA, "CodexDreamSkin");
+    const root = path.join(process.env.LOCALAPPDATA, "CodexDreamSkinYuuka");
     files.push(path.join(root, "state.json"));
     try {
       for (const entry of await fs.readdir(root)) {

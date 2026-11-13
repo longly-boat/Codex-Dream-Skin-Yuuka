@@ -11,9 +11,14 @@ internal sealed class OperationLease : IDisposable
         var sid = WindowsIdentity.GetCurrent().User?.Value ?? throw new StoreException("busy");
         try
         {
-            foreach (var suffix in new[] { "Operation", "ThemeImport" })
+            // Operation is shared with both products' PowerShell launchers;
+            // ThemeImport protects this product's independent saved-theme store.
+            foreach (var name in new[] {
+                $"Global\\CodexDreamSkin.{sid}.Operation",
+                $"Local\\{ProductIdentity.StateDirectoryName}.{sid}.ThemeImport"
+            })
             {
-                var mutex = new Mutex(false, $"Local\\CodexDreamSkin.{sid}.{suffix}");
+                var mutex = new Mutex(false, name);
                 bool acquired;
                 try { acquired = mutex.WaitOne(0); }
                 catch (AbandonedMutexException) { acquired = true; }

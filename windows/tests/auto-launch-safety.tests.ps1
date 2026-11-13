@@ -67,7 +67,7 @@ foreach ($forbidden in @('Stop-Process', 'taskkill', 'Stop-DreamSkinCodex')) {
   }
 }
 foreach ($required in @(
-  'Codex Dream Skin Auto Launch.lnk',
+  'Codex Dream Skin Yuuka Auto Launch.lnk',
   '-ExecutionPolicy RemoteSigned',
   'auto-launch-dream-skin.ps1',
   'auto-launch.stop',
@@ -586,6 +586,8 @@ try {
   }
   Set-Item 'function:Get-DreamSkinPortListeners' -Value { param($Port); return @() }
   & {
+    # This fixture isolates listener normalization from real OS reservations.
+    function Test-DreamSkinLoopbackPortBindable { param($Port); return $true }
     Set-StrictMode -Version 2.0
     if ((Test-DreamSkinCodexPortOwner -Port 9335 -Codex $syntheticInstall) -or
       -not (Test-DreamSkinPortAvailable -Port 9335)) {
@@ -805,6 +807,13 @@ try {
     $script:codexOwnerCdpCalls -ne 0) {
     throw 'An injector-less new state did not retain its exact recorded Codex process owner.'
   }
+
+  # A reused PID with a different creation time must not block a new stock
+  # session solely because the executable path matches the previous session.
+  $newCodexOnlyState.codexStartTimeFileTimeUtc = $script:codexOwnerStart.AddMinutes(-1).ToFileTimeUtc()
+  $staleOwnership = Get-DreamSkinRecordedStateSessionOwnership -State $newCodexOnlyState -StateRoot 'C:\SyntheticState'
+  if ($staleOwnership.IsLive) { throw 'An exited modern owner was confused with a replacement same-path process.' }
+  $newCodexOnlyState.codexStartTimeFileTimeUtc = $script:codexOwnerStart.ToFileTimeUtc()
 
   $legacyCodexOnlyState = [pscustomobject]@{
     codexExe = 'C:\SyntheticPackage\app\ChatGPT.exe'

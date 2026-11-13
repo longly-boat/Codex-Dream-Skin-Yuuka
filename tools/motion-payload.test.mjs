@@ -199,8 +199,10 @@ async function platformLoader(platform) {
 // real loadPayload. Keep DOM behavior minimal here: full interaction/layout
 // coverage belongs to the renderer/browser tests.
 async function runBuiltController(platform, payload) {
-  const declaration = payload.match(/const suppliedConfig = ([^\n]+);/);
-  assert.ok(declaration, "built payload must initialize the shared motion controller");
+  assert.match(payload, /const suppliedConfig = __dreamSkinMotionConfig;/,
+    "the shipped controller must consume the one shared motion configuration");
+  const declaration = payload.match(/const __dreamSkinMotionConfig = ([^\n]+);/);
+  assert.ok(declaration, "built payload must initialize its shared motion configuration");
   const config = JSON.parse(declaration[1]);
   const template = await fs.readFile(new URL(`../${platform}/assets/theme-motion.js`, import.meta.url), "utf8");
   const node = () => {

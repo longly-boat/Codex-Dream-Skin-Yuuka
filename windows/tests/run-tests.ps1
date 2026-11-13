@@ -9,6 +9,10 @@ $Root = Split-Path -Parent $PSScriptRoot
 & (Join-Path $PSScriptRoot 'theme-manager-maintenance.tests.ps1')
 & (Join-Path $PSScriptRoot 'codex-home.tests.ps1')
 & (Join-Path $PSScriptRoot 'retired-theme-migration.tests.ps1')
+& (Join-Path $PSScriptRoot 'yuuka-update.tests.ps1')
+& (Join-Path $PSScriptRoot 'yuuka-migration.tests.ps1')
+& (Join-Path $PSScriptRoot 'yuuka-product.tests.ps1')
+& (Join-Path $PSScriptRoot 'yuuka-bootstrap-lifecycle.tests.ps1')
 
 if ((Resolve-DreamSkinLanguage -Language 'zh-CN') -cne 'zh-CN' -or
   (Resolve-DreamSkinLanguage -Language 'en-US') -cne 'en-US') {
@@ -39,13 +43,13 @@ try {
 
 $updateScript = [System.IO.File]::ReadAllText((Join-Path $Root 'scripts\check-update.ps1'))
 if (-not $updateScript.Contains(
-    "`$repository = 'EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose'"
+    "`$repository = 'longly-boat/Codex-Dream-Skin-Yuuka'"
   ) -or $updateScript.Contains("`$repository = 'EmiyaKatuz/Codex-Dream-Skin'")) {
   throw 'Windows update checks must use this fork canonical GitHub repository.'
 }
 
 foreach ($removedThemePath in @(
-  'presets', 'assets\codex-dream-skin-pixel-cafe.png', 'assets\theme-choten.json'
+  'assets\codex-dream-skin-pixel-cafe.png', 'assets\theme-choten.json'
 )) {
   if (Test-Path -LiteralPath (Join-Path $Root $removedThemePath)) {
     throw "Windows source contains a removed bundled theme: $removedThemePath"
@@ -61,7 +65,7 @@ try {
   $runtimeStateRoot = Join-Path $temporaryRoot 'runtime-state'
   New-Item -ItemType Directory -Path $runtimeSourceRoot | Out-Null
   Copy-Item -LiteralPath (Join-Path $Root 'VERSION') -Destination $runtimeSourceRoot -Force
-  foreach ($directoryName in @('assets', 'scripts')) {
+  foreach ($directoryName in @('assets', 'scripts', 'presets')) {
     Copy-Item -LiteralPath (Join-Path $Root $directoryName) -Destination $runtimeSourceRoot `
       -Recurse -Force -ErrorAction Stop
   }
@@ -124,12 +128,14 @@ try {
   $runtimeSourceFiles = @((Get-Item -LiteralPath (Join-Path $runtimeSourceRoot 'VERSION'))) + @(
     Get-ChildItem -LiteralPath (Join-Path $runtimeSourceRoot 'assets'), `
       (Join-Path $runtimeSourceRoot 'scripts'), `
+      (Join-Path $runtimeSourceRoot 'presets'), `
       (Join-Path $runtimeSourceRoot 'runtime') `
       -Recurse -File -Force
   )
   $runtimeEngineFiles = @((Get-Item -LiteralPath $engine.Version)) + @(
     Get-ChildItem -LiteralPath (Join-Path $engine.Root 'assets'), `
       (Join-Path $engine.Root 'scripts'), `
+      (Join-Path $engine.Root 'presets'), `
       (Join-Path $engine.Root 'runtime') `
       -Recurse -File -Force
   )
@@ -240,7 +246,7 @@ try {
 
   $invalidRuntimeRoot = Join-Path $temporaryRoot 'invalid-runtime-source'
   New-Item -ItemType Directory -Path $invalidRuntimeRoot | Out-Null
-  foreach ($directoryName in @('assets', 'scripts')) {
+  foreach ($directoryName in @('assets', 'scripts', 'presets')) {
     Copy-Item -LiteralPath (Join-Path $runtimeSourceRoot $directoryName) -Destination $invalidRuntimeRoot `
       -Recurse -Force -ErrorAction Stop
   }
@@ -339,7 +345,7 @@ try {
     '$startScript = $engine.Start',
     '$restoreScript = $engine.Restore',
     '$trayScript = $engine.Tray',
-    "`$shortcutIcon = Join-Path `$engine.Root 'assets\internet-angel-tray.ico'",
+    "`$shortcutIcon = Join-Path `$engine.Root 'assets\yuuka-tray.ico'",
     '$shortcut.WorkingDirectory = $engine.Root',
     '$shortcut.IconLocation = "$shortcutIcon,0"',
     '$restore.WorkingDirectory = $engine.Root',
@@ -1162,26 +1168,27 @@ args = [
     throw 'Theme-store initialization must preserve existing saved presets and custom themes.'
   }
   $initialTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
-  if ($initialTheme.Theme.id -cne 'preset-internet-angel-default' -or
-    $initialTheme.Theme.name -cne '超天酱 · INTERNET ANGEL' -or
-    $initialTheme.Theme.appearance -cne 'auto' -or
+  if ($initialTheme.Theme.id -cne 'yuuka-seminar' -or
+    $initialTheme.Theme.name -cne '优香 · 千年研讨会' -or
+    $initialTheme.Theme.appearance -cne 'light' -or
     $initialTheme.Theme.art.safeArea -cne 'left' -or
     $initialTheme.Theme.art.taskMode -cne 'ambient' -or
-    [System.IO.Path]::GetExtension($initialTheme.ImagePath) -cne '.jpg') {
-    throw 'Default Windows theme did not seed the Internet Angel wallpaper contract.'
+    [System.IO.Path]::GetExtension($initialTheme.ImagePath) -cne '.png' -or
+    -not (Test-Path -LiteralPath (Join-Path $themePaths.Active 'theme.css') -PathType Leaf)) {
+    throw 'Default Windows theme did not seed the Yuuka wallpaper and Safe CSS contract.'
   }
   $preseededThemes = @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot)
   $preseededIds = @($preseededThemes | ForEach-Object { $_.Id } | Sort-Object)
-  if ($preseededThemes.Count -ne 1 -or
-    $preseededIds[0] -cne 'preset-internet-angel-default') {
-    throw 'Windows must preseed only the customized Internet Angel JPEG theme.'
+  if ($preseededThemes.Count -ne 2 -or
+    ($preseededIds -join ',') -cne 'yuuka-seminar,yuuka-seminar-night') {
+    throw 'Windows must preseed the light and dark Yuuka themes.'
   }
-  $internetAngelDefault = $preseededThemes | Where-Object {
-    $_.Id -ceq 'preset-internet-angel-default'
+  $yuukaDefault = $preseededThemes | Where-Object {
+    $_.Id -ceq 'yuuka-seminar'
   } | Select-Object -First 1
-  if ($null -eq $internetAngelDefault -or
-    $internetAngelDefault.Name -cne '超天酱 · INTERNET ANGEL') {
-    throw 'The customized Internet Angel JPEG theme was not preseeded with its display name.'
+  if ($null -eq $yuukaDefault -or
+    $yuukaDefault.Name -cne '优香 · 千年研讨会') {
+    throw 'The default Yuuka theme was not preseeded with its display name.'
   }
   $upgradeStateRoot = Join-Path $temporaryRoot 'preserved-upgrade-theme-state'
   $upgradePaths = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $upgradeStateRoot
@@ -1203,7 +1210,6 @@ args = [
     -ThemeDirectory (Join-Path $upgradePaths.Saved 'preset-gothic-void-crusade') `
     -StateRoot $upgradeStateRoot
   foreach ($existingFile in Get-ChildItem -LiteralPath $upgradePaths.Saved, $upgradePaths.Active -Recurse -File) {
-    if ($existingFile.FullName -match 'preset-internet-angel-default') { continue }
     $preservedUpgradeFiles[$existingFile.FullName] = (Get-FileHash -LiteralPath $existingFile.FullName -Algorithm SHA256).Hash
   }
   $null = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $upgradeStateRoot
@@ -1216,7 +1222,7 @@ args = [
   }
   $upgradedActive = Read-DreamSkinTheme -ThemeDirectory $upgradePaths.Active
   if ($upgradedActive.Theme.id -cne 'preset-gothic-void-crusade' -or
-    @(Get-DreamSkinSavedThemes -StateRoot $upgradeStateRoot).Count -ne 5) {
+    @(Get-DreamSkinSavedThemes -StateRoot $upgradeStateRoot).Count -ne 6) {
     throw 'Theme cleanup changed an existing selection or saved-theme library.'
   }
 
@@ -1271,7 +1277,7 @@ args = [
   $null = Initialize-DreamSkinThemeStore -SkillRoot $Root -StateRoot $themeStateRoot
   $idempotentTheme = Read-DreamSkinTheme -ThemeDirectory $themePaths.Active
   $afterReinitCount = @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count
-  if ($idempotentTheme.Theme.id -cne 'preserved-theme' -or $afterReinitCount -ne 1) {
+  if ($idempotentTheme.Theme.id -cne 'preserved-theme' -or $afterReinitCount -ne 2) {
     throw 'Theme-store initialization overwrote the active custom theme or duplicated its bundled presets.'
   }
 
@@ -1452,19 +1458,21 @@ args = [
   New-Item -ItemType Directory -Path $releaseFixtureAssets, $releaseFixtureScripts -Force | Out-Null
   Copy-Item -LiteralPath (Join-Path $Root 'VERSION') -Destination $releaseFixtureRoot -Force
   foreach ($releaseAsset in @(
-    'dream-reference.jpg', 'theme.json',
+    'background.png', 'theme.json', 'theme.css', 'yuuka-tray.ico', 'yuuka-tray.png', 'codex-dream-skin.ico',
     'dream-skin.css', 'internet-angel-acrylic.css', 'internet-angel-extension.css',
     'internet-angel-extension.js', 'css-predicate-cache.mjs', 'renderer-inject.js', 'safe-css-policy.json', 'safe-css-validator.mjs', 'selectors.json',
     'retired-theme-migration.mjs', 'retired-theme-catalog.json',
-    'theme-package-validator.mjs', 'theme-preferences.mjs', 'theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs'
+    'theme-package-validator.mjs', 'theme-preferences.mjs', 'theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js'
   )) {
     Copy-Item -LiteralPath (Join-Path $Root "assets\$releaseAsset") `
       -Destination $releaseFixtureAssets -Force
   }
+  Copy-Item -LiteralPath (Join-Path $Root 'presets') -Destination $releaseFixtureRoot -Recurse -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\common-windows.ps1') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\acrylic-window.ps1') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\apply-community-theme.ps1') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\auto-launch-dream-skin.ps1') -Destination $releaseFixtureScripts -Force
+  Copy-Item -LiteralPath (Join-Path $Root 'scripts\auto-launch-hidden.cs') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\check-update.ps1') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\config-utf8.ps1') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\image-metadata.mjs') -Destination $releaseFixtureScripts -Force
@@ -1481,20 +1489,22 @@ args = [
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\tray-dream-skin.ps1') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\validate-safe-css-file.mjs') -Destination $releaseFixtureScripts -Force
   Copy-Item -LiteralPath (Join-Path $Root 'scripts\verify-dream-skin.ps1') -Destination $releaseFixtureScripts -Force
+  Copy-Item -LiteralPath (Join-Path $Root 'scripts\yuuka-migration.ps1') -Destination $releaseFixtureScripts -Force
   $releaseThemePaths = Initialize-DreamSkinThemeStore -SkillRoot $releaseFixtureRoot `
     -StateRoot $releaseFixtureState
   $releaseActiveTheme = Read-DreamSkinTheme -ThemeDirectory $releaseThemePaths.Active
   $releaseSavedThemes = @(Get-DreamSkinSavedThemes -StateRoot $releaseFixtureState)
-  $releaseSavedIds = @($releaseSavedThemes | ForEach-Object { $_.Id })
-  if ($releaseActiveTheme.Theme.id -cne 'preset-internet-angel-default' -or
-    $releaseSavedThemes.Count -ne 1 -or
-    $releaseSavedIds[0] -cne 'preset-internet-angel-default') {
-    throw 'Release-shaped payload must seed only the customized Internet Angel JPEG theme.'
+  $releaseSavedIds = @($releaseSavedThemes | ForEach-Object { $_.Id } | Sort-Object)
+  if ($releaseActiveTheme.Theme.id -cne 'yuuka-seminar' -or
+    $releaseSavedThemes.Count -ne 2 -or
+    ($releaseSavedIds -join ',') -cne 'yuuka-seminar,yuuka-seminar-night' -or
+    -not (Test-Path -LiteralPath (Join-Path $releaseThemePaths.Active 'theme.css') -PathType Leaf)) {
+    throw 'Release-shaped payload must seed both Yuuka themes with the light theme and Safe CSS active.'
   }
   $releaseEngine = Install-DreamSkinRuntimeEngine -SkillRoot $releaseFixtureRoot `
     -StateRoot (Join-Path $temporaryRoot 'release-engine-state')
   foreach ($releaseThemeAsset in @(
-    'dream-reference.jpg', 'theme.json'
+    'background.png', 'theme.json', 'theme.css', 'yuuka-tray.ico', 'yuuka-tray.png', 'codex-dream-skin.ico'
   )) {
     $sourceAsset = Join-Path $releaseFixtureAssets $releaseThemeAsset
     $installedAsset = Join-Path (Join-Path $releaseEngine.Root 'assets') $releaseThemeAsset
@@ -1505,7 +1515,7 @@ args = [
     }
   }
   foreach ($removedThemePath in @(
-    'presets', 'assets\codex-dream-skin-pixel-cafe.png', 'assets\theme-choten.json'
+    'assets\codex-dream-skin-pixel-cafe.png', 'assets\theme-choten.json'
   )) {
     if (Test-Path -LiteralPath (Join-Path $releaseEngine.Root $removedThemePath)) {
       throw "Release-shaped runtime contains a removed bundled theme: $removedThemePath"
@@ -1513,15 +1523,15 @@ args = [
   }
 
   $savedTheme = Save-DreamSkinCurrentTheme -Name '已保存主题' -StateRoot $themeStateRoot
-  if ($savedTheme.Theme.name -cne '已保存主题' -or @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 2) {
+  if ($savedTheme.Theme.name -cne '已保存主题' -or @(Get-DreamSkinSavedThemes -StateRoot $themeStateRoot).Count -ne 3) {
     throw 'Saved theme creation or discovery failed.'
   }
   $null = Use-DreamSkinSavedTheme -ThemeDirectory $savedTheme.Directory -StateRoot $themeStateRoot
 
   $outsideTheme = Join-Path $temporaryRoot 'outside-theme'
   New-Item -ItemType Directory -Path $outsideTheme | Out-Null
-  Copy-Item -LiteralPath (Join-Path $Root 'assets\dream-reference.jpg') `
-    -Destination (Join-Path $outsideTheme 'dream-reference.jpg')
+  Copy-Item -LiteralPath (Join-Path $Root 'assets\background.png') `
+    -Destination (Join-Path $outsideTheme 'background.png')
   Copy-Item -LiteralPath (Join-Path $Root 'assets\theme.json') `
     -Destination (Join-Path $outsideTheme 'theme.json')
   $junctionTheme = Join-Path $themePaths.Saved 'junction-escape'
@@ -1622,7 +1632,7 @@ args = [
   $traySource = Read-DreamSkinUtf8File -Path (Join-Path $Root 'scripts\tray-dream-skin.ps1')
   foreach ($requiredTrayAction in @(
     'System.Windows.Forms.NotifyIcon',
-    'internet-angel-tray.ico',
+    'yuuka-tray.ico',
     "Get-DreamSkinTrayText -Key 'Pause'",
     "Get-DreamSkinTrayText -Key 'Resume'",
     "Get-DreamSkinTrayText -Key 'ChangeBackground'",
@@ -1632,9 +1642,9 @@ args = [
   )) {
     if (-not $traySource.Contains($requiredTrayAction)) { throw "Tray action is missing: $requiredTrayAction" }
   }
-  foreach ($trayAsset in @('assets\internet-angel-tray.png', 'assets\internet-angel-tray.ico')) {
+  foreach ($trayAsset in @('assets\yuuka-tray.png', 'assets\yuuka-tray.ico')) {
     if (-not (Test-Path -LiteralPath (Join-Path $Root $trayAsset) -PathType Leaf)) {
-      throw "Internet Angel tray asset is missing: $trayAsset"
+      throw "Yuuka tray asset is missing: $trayAsset"
     }
   }
   if (-not $traySource.Contains('Invoke-DreamSkinLiveRemove') -or
@@ -1690,7 +1700,7 @@ args = [
     throw 'Tray actions still bypass the PowerShell execution policy.'
   }
   if (-not $traySource.Contains('$shortcut.IconLocation = "$trayIconPath,0"')) {
-    throw 'Tray startup shortcut no longer uses the Internet Angel application icon.'
+    throw 'Tray startup shortcut no longer uses the Yuuka application icon.'
   }
   if (-not $traySource.Contains("Start-Process -FilePath `$powershell -ArgumentList `$argumentLine -WindowStyle Hidden") -or
     -not $traySource.Contains('ConvertTo-DreamSkinProcessArgument -Value $paths.Images')) {
@@ -1872,6 +1882,11 @@ args = [
   & (Join-Path $PSScriptRoot 'start-renderer-readiness.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'start-verified-skin-preserved.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-safety.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'startup-lock-contention.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'auto-launch-child-exit.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'official-profile-discovery.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'auto-launch-hidden.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'port-bindability.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'acrylic-window.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'window-effects.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'port-stale-listener.tests.ps1') -Root $Root
@@ -1980,18 +1995,34 @@ args = [
   if ($payloadTest.ExitCode -ne 0) { throw 'Injector self-test failed.' }
   $defaultPayload = ($payloadTest.Output -join "`n") | ConvertFrom-Json -ErrorAction Stop
   if ($defaultPayload.hasPalette -or -not $defaultPayload.hasColors -or
-    $defaultPayload.colorMode -cne 'explicit' -or $defaultPayload.accent -cne '#ff45c8' -or
+    $defaultPayload.colorMode -cne 'explicit' -or $defaultPayload.accent -cne '#176baf' -or
     $defaultPayload.explicitColorKeys -isnot [array] -or
     @($defaultPayload.explicitColorKeys) -notcontains 'accent') {
-    throw 'The bundled legacy Internet Angel accent was not migrated into the normalized colors contract.'
+    throw 'The bundled Yuuka accent was not retained in the normalized colors contract.'
   }
   $acrylicPayloadTest = Invoke-DreamSkinNative -FilePath $node.Path -ArgumentList @(
     (Join-Path $Root 'scripts\injector.mjs'), '--check-payload', '--window-material', 'acrylic')
   if ($acrylicPayloadTest.ExitCode -ne 0) { throw 'Acrylic payload self-test failed.' }
   $acrylicPayload = ($acrylicPayloadTest.Output -join "`n") | ConvertFrom-Json -ErrorAction Stop
   if ("$($acrylicPayload.windowMaterial)" -cne 'acrylic' -or
-    -not [bool]$acrylicPayload.acrylicOverlay) {
-    throw 'Acrylic payload did not include the Internet Angel glass overlay.'
+    $acrylicPayload.themeId -cne 'yuuka-seminar' -or
+    [bool]$acrylicPayload.internetAngelExtension -or [bool]$acrylicPayload.acrylicOverlay) {
+    throw 'Yuuka Acrylic payload must not inherit the Internet Angel glass overlay.'
+  }
+  # Keep the legacy Acrylic contract covered with an explicitly selected
+  # Internet Angel fixture instead of assuming it is the bundled default.
+  $legacyAcrylicDirectory = Join-Path $temporaryRoot 'legacy-acrylic-payload'
+  New-Item -ItemType Directory -Path $legacyAcrylicDirectory | Out-Null
+  $legacyAcrylicCatalog = (Read-DreamSkinUtf8File -Path (Join-Path $Root 'assets\retired-theme-catalog.json')) | ConvertFrom-Json
+  Write-DreamSkinTheme -ThemeDirectory $legacyAcrylicDirectory -Theme $legacyAcrylicCatalog.retained.theme
+  Copy-Item -LiteralPath (Join-Path $Root 'assets\dream-reference.jpg') -Destination $legacyAcrylicDirectory
+  $legacyAcrylicTest = Invoke-DreamSkinNative -FilePath $node.Path -ArgumentList @(
+    (Join-Path $Root 'scripts\injector.mjs'), '--check-payload', '--window-material', 'acrylic', '--theme-dir', $legacyAcrylicDirectory)
+  if ($legacyAcrylicTest.ExitCode -ne 0) { throw 'Legacy Acrylic payload self-test failed.' }
+  $legacyAcrylicPayload = ($legacyAcrylicTest.Output -join "`n") | ConvertFrom-Json -ErrorAction Stop
+  if ($legacyAcrylicPayload.windowMaterial -cne 'acrylic' -or
+    -not [bool]$legacyAcrylicPayload.internetAngelExtension -or -not [bool]$legacyAcrylicPayload.acrylicOverlay) {
+    throw 'Explicit Internet Angel Acrylic payload lost its glass overlay.'
   }
   $invalidMaterialTest = Invoke-DreamSkinNative -FilePath $node.Path -ArgumentList @(
     (Join-Path $Root 'scripts\injector.mjs'), '--check-payload', '--window-material', 'blur')

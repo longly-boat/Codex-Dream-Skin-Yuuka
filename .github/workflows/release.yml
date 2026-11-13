@@ -1,4 +1,4 @@
-name: Release
+name: Release Yuuka for Windows
 
 # This workflow deliberately does NOT gate on `workflow_run: [CI]`.  The guard
 # job below decides whether a main push is a real version bump by diffing
@@ -19,12 +19,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: release-main
+  group: release-yuuka-main
   cancel-in-progress: false
 
 jobs:
   guard:
     name: Prepare release candidate
+    if: github.repository == 'longly-boat/Codex-Dream-Skin-Yuuka'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -285,6 +286,7 @@ jobs:
           node --test macos/tests/*.test.mjs
           node --test windows/tests/*.test.mjs
           node --test tools/*.test.mjs
+          node tools/sync-runtime-assets.mjs --check
           node macos/scripts/injector.mjs --check-payload >/dev/null
           node windows/scripts/injector.mjs --check-payload >/dev/null
           node linux/scripts/injector.mjs --check-payload >/dev/null
@@ -327,8 +329,8 @@ jobs:
             exit 1
           }
 
-  build-macos:
-    name: Build macOS DMG
+  check-macos:
+    name: Check inherited macOS sources (no Yuuka package)
     needs: [guard, create-tag]
     if: needs.guard.outputs.should_release == 'true'
     runs-on: macos-latest
@@ -344,7 +346,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Build unsigned DMG
+      - name: Run macOS native regressions
         shell: bash
         env:
           VERSION: ${{ needs.guard.outputs.version }}
@@ -355,23 +357,9 @@ jobs:
             CODEX_DREAM_SKIN_SKIP_DOCTOR=1 \
             ./macos/tests/run-tests.sh
           swift test --package-path macos/menubar-app
-          test -x macos/scripts/build-dmg.sh || chmod +x macos/scripts/build-dmg.sh
-          # The builder owns app assembly, engine staging, and ad-hoc signing.
-          # Release signing/notarization remains optional and is intentionally
-          # outside this unsigned public workflow.
-          ./macos/scripts/build-dmg.sh --skip-tests
-          artifact="macos/release/CodexDreamSkin-v${VERSION}.dmg"
-          test -s "$artifact"
-          hdiutil imageinfo "$artifact" >/dev/null
 
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: release-macos
-          if-no-files-found: error
-          path: macos/release/CodexDreamSkin-v${{ needs.guard.outputs.version }}.dmg
-          retention-days: 14
-
+  # Yuuka currently ships a Windows installer only. Inherited macOS sources
+  # remain tested, but must be rebranded and verified before adding a DMG.
   build-windows:
     name: Build Windows Setup
     needs: [guard, create-tag]
@@ -452,7 +440,7 @@ jobs:
             -File .\windows\installer\build-release.ps1 `
             -OutputDirectory $output -IsccPath $env:ISCC_PATH
           if ($LASTEXITCODE -ne 0) { throw "Windows release builder failed with exit code $LASTEXITCODE." }
-          $artifact = Join-Path $output "CodexDreamSkin-Setup-v$env:VERSION.exe"
+          $artifact = Join-Path $output "CodexDreamSkinYuuka-Setup-v$env:VERSION.exe"
           if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) {
             throw "Expected Windows artifact was not created: $artifact"
           }
@@ -463,12 +451,12 @@ jobs:
         with:
           name: release-windows
           if-no-files-found: error
-          path: ${{ runner.temp }}/codex-dream-skin-release/CodexDreamSkin-Setup-v${{ needs.guard.outputs.version }}.exe
+          path: ${{ runner.temp }}/codex-dream-skin-release/CodexDreamSkinYuuka-Setup-v${{ needs.guard.outputs.version }}.exe
           retention-days: 14
 
   publish-release:
     name: Validate and publish GitHub Release
-    needs: [guard, create-tag, build-macos, build-windows]
+    needs: [guard, create-tag, check-macos, build-windows]
     if: needs.guard.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -494,24 +482,27 @@ jobs:
           RELEASE_SHA: ${{ needs.guard.outputs.release_sha }}
         run: |
           set -euo pipefail
-          test -s "dist/CodexDreamSkin-v${VERSION}.dmg"
-          test -s "dist/CodexDreamSkin-Setup-v${VERSION}.exe"
+          test -s "dist/CodexDreamSkinYuuka-Setup-v${VERSION}.exe"
           (
             cd dist
-            sha256sum "CodexDreamSkin-v${VERSION}.dmg" \
-              "CodexDreamSkin-Setup-v${VERSION}.exe" > SHA256SUMS.txt
+            sha256sum "CodexDreamSkinYuuka-Setup-v${VERSION}.exe" > SHA256SUMS.txt
           )
           test -s "docs/releases/v${VERSION}.md"
           test -s "docs/releases/v${VERSION}-en.md"
           cat "docs/releases/v${VERSION}.md" > release-notes.md
           cat >> release-notes.md <<EOF
 
+          ## 特别感谢 / Special thanks
+
+          特别感谢 [超天酱主题仓库及其贡献者](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose)。优香版沿用其主题引擎、安装与自动接管、动效框架和主题管理器，并在此基础上开发优香素材与功能。原有版权与许可证声明继续保留。
+
+          Special thanks to the Internet Angel project's maintainers and contributors whose open-source work makes this derivative possible. See [credits](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/CREDITS.md).
+
           ## 下载与安装 / Downloads
 
           | 平台 / Platform | 安装包 / Package | 安装说明 / Guide |
           | --- | --- | --- |
-          | macOS · Apple Silicon / Intel | [CodexDreamSkin-v${VERSION}.dmg](https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/CodexDreamSkin-v${VERSION}.dmg) | [macOS](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/docs/install-macos.md) |
-          | Windows · x64 | [CodexDreamSkin-Setup-v${VERSION}.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/CodexDreamSkin-Setup-v${VERSION}.exe) | [Windows](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/docs/install-windows.md) |
+          | Windows · x64 | [CodexDreamSkinYuuka-Setup-v${VERSION}.exe](https://github.com/${GITHUB_REPOSITORY}/releases/download/v${VERSION}/CodexDreamSkinYuuka-Setup-v${VERSION}.exe) | [Windows](https://github.com/${GITHUB_REPOSITORY}/blob/v${VERSION}/docs/install-windows.md) |
 
           安装包目前未签名，首次打开请按对应平台的图形化安装说明操作。
           Packages are currently unsigned; follow the platform guide for first-run steps.
@@ -539,20 +530,18 @@ jobs:
               exit 1
             }
             gh release upload "$TAG" --clobber \
-              dist/CodexDreamSkin-v${VERSION}.dmg \
-              dist/CodexDreamSkin-Setup-v${VERSION}.exe \
+              dist/CodexDreamSkinYuuka-Setup-v${VERSION}.exe \
               dist/SHA256SUMS.txt
             gh release edit "$TAG" --draft \
-              --title "Codex Dream Skin v${VERSION}" \
+              --title "Codex Dream Skin Yuuka v${VERSION}" \
               --notes-file release-notes.md
           else
             gh release create "$TAG" \
               --verify-tag \
               --draft \
-              --title "Codex Dream Skin v${VERSION}" \
+              --title "Codex Dream Skin Yuuka v${VERSION}" \
               --notes-file release-notes.md \
-              dist/CodexDreamSkin-v${VERSION}.dmg \
-              dist/CodexDreamSkin-Setup-v${VERSION}.exe \
+              dist/CodexDreamSkinYuuka-Setup-v${VERSION}.exe \
               dist/SHA256SUMS.txt
           fi
 
@@ -565,8 +554,7 @@ jobs:
             throw new Error("Draft release metadata is invalid before publication.");
           }
           const expected = [
-            "CodexDreamSkin-v" + process.env.VERSION + ".dmg",
-            "CodexDreamSkin-Setup-v" + process.env.VERSION + ".exe",
+            "CodexDreamSkinYuuka-Setup-v" + process.env.VERSION + ".exe",
             "SHA256SUMS.txt",
           ];
           if (release.assets.length !== expected.length || !expected.every((name) => release.assets.some((asset) => asset.name === name))) {
@@ -585,8 +573,7 @@ jobs:
           RELEASE_JSON="$final_json" VERSION="$VERSION" node <<'NODE'
           const release = JSON.parse(process.env.RELEASE_JSON);
           const expected = [
-            "CodexDreamSkin-v" + process.env.VERSION + ".dmg",
-            "CodexDreamSkin-Setup-v" + process.env.VERSION + ".exe",
+            "CodexDreamSkinYuuka-Setup-v" + process.env.VERSION + ".exe",
             "SHA256SUMS.txt",
           ];
           if (release.isDraft || release.isPrerelease || release.tagName !== "v" + process.env.VERSION ||

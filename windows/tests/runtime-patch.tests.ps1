@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param([Parameter(Mandatory = $true)][string]$Root)
 
 $ErrorActionPreference = 'Stop'
@@ -42,7 +42,7 @@ try {
     'css-predicate-cache.mjs',
     'dream-skin.css',
     'internet-angel-acrylic.css',
-    'internet-angel-extension.js', 'internet-angel-extension.css', 'theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json'
+    'internet-angel-extension.js', 'internet-angel-extension.css', 'theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json'
   )) {
     if (-not $quickFixBuilderSource.Contains("'$requiredQuickFixAsset'")) {
       throw "The quick-fix archive omits a runtime patch asset: $requiredQuickFixAsset"
@@ -64,7 +64,7 @@ try {
     'css-predicate-cache.mjs',
     'dream-skin.css',
     'internet-angel-acrylic.css',
-    'internet-angel-extension.js', 'internet-angel-extension.css', 'theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json'
+    'internet-angel-extension.js', 'internet-angel-extension.css', 'theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json'
   )) {
     $sourceAsset = Join-Path $Root "assets\$requiredQuickFixAsset"
     $archivedAsset = Join-Path $quickFixExtract "assets\$requiredQuickFixAsset"
@@ -179,7 +179,7 @@ try {
     $installedCommon, $installedStart, $installedTheme, $installedInjector, $installedPatch, $installedRenderer,
     $installedCss, $installedAcrylicCss, $installedExtensionCss, $installedExtensionScript, $installedPredicateRuntime
   )
-  foreach ($assetName in @('theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json')) {
+  foreach ($assetName in @('theme-motion.js', 'theme-motion.css', 'motion-settings.mjs', 'motion-payload.mjs', 'yuuka-art.mjs', 'yuuka-skin.css', 'yuuka-renderer.js', 'theme-preferences.mjs', 'retired-theme-migration.mjs', 'retired-theme-catalog.json')) {
     $installedMotion = Join-Path $assetsRoot $assetName
     $sourceMotion = Join-Path $Root "assets\$assetName"
     if ((Get-FileHash -LiteralPath $installedMotion -Algorithm SHA256).Hash -cne
@@ -204,6 +204,22 @@ try {
   if ((Get-FileHash -LiteralPath $installedPreferences -Algorithm SHA256).Hash -cne
     (Get-FileHash -LiteralPath (Join-Path $Root 'assets\theme-preferences.mjs') -Algorithm SHA256).Hash) {
     throw 'A stale theme preferences dependency was not atomically repaired.'
+  }
+  foreach ($scriptName in @('auto-launch-dream-skin.ps1', 'tray-dream-skin.ps1')) {
+    $sourceStartup = Join-Path $Root "scripts\$scriptName"
+    $installedStartup = Join-Path $scriptsRoot $scriptName
+    $archivedStartup = Join-Path $quickFixExtract "scripts\$scriptName"
+    $expectedStartupHash = (Get-FileHash -LiteralPath $sourceStartup -Algorithm SHA256).Hash
+    if ((Get-FileHash -LiteralPath $installedStartup -Algorithm SHA256).Hash -cne $expectedStartupHash -or
+      (Get-FileHash -LiteralPath $archivedStartup -Algorithm SHA256).Hash -cne $expectedStartupHash) {
+      throw "The startup fix was omitted from installation or the patch archive: $scriptName"
+    }
+    [IO.File]::AppendAllText($installedStartup, "`r`n# stale startup-only fixture`r`n")
+    & $patchScript -SourceRoot $Root -StateRoot $stateRoot
+    if ((Get-FileHash -LiteralPath $installedStartup -Algorithm SHA256).Hash -cne $expectedStartupHash) {
+      throw "A startup-only change was incorrectly skipped: $scriptName"
+    }
+    $patchedFiles += $installedStartup
   }
   $beforeIdempotentHashes = @($patchedFiles | ForEach-Object {
     (Get-FileHash -LiteralPath $_ -Algorithm SHA256).Hash

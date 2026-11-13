@@ -49,6 +49,9 @@ function Exit-DreamSkinOperationLock {
   if ($Mutex -eq 'mock-lock') { $script:lockExited = $true }
 }
 function Assert-DreamSkinPort { param([int]$Port) }
+# This lifecycle fixture starts with no legacy engine. The real coexistence
+# guard is exercised separately by yuuka-product.tests.ps1.
+function Assert-YuukaLegacyEngineInactive {}
 function Get-DreamSkinNodeRuntime {
   return [pscustomobject]@{ Path = 'mock-node.exe'; Version = '22.23.1' }
 }
@@ -185,7 +188,7 @@ $originalDesktopProfile = $env:CODEX_ELECTRON_USER_DATA_PATH
 $fixtureStateRoot = Join-Path ([System.IO.Path]::GetTempPath()) `
   ('dreamskin-start-cdp-failure-' + [guid]::NewGuid().ToString('N'))
 $env:LOCALAPPDATA = $fixtureStateRoot
-$childStateRoot = Join-Path $fixtureStateRoot 'CodexDreamSkin'
+$childStateRoot = Join-Path $fixtureStateRoot 'CodexDreamSkinYuuka'
 $failure = $null
 try {
   $startBlock = [scriptblock]::Create($source)
@@ -199,7 +202,10 @@ try {
     -not $script:lockExited -or $script:packageActivationOnly -or $profileArguments.Count -ne 1 -or
     $profileArguments[0] -cne "--user-data-dir=$expectedProfile" -or
     -not (Test-Path -LiteralPath $expectedProfile -PathType Container)) {
-    throw 'A failed CDP launch did not close Codex, restore appearance, then reopen normally.'
+    throw ("A failed CDP launch did not close Codex, restore appearance, then reopen normally. " +
+      "Failure=$($failure.Exception.Message); installs=$($script:installCalls); events=$($script:events -join ','); " +
+      "lockExited=$($script:lockExited); packageActivationOnly=$($script:packageActivationOnly); " +
+      "profile=$($profileArguments -join ','); expected=$expectedProfile")
   }
 
   $script:fixturePackageFullName = 'OpenAI.Codex_26.1027.3384.0_x64__2p2nqsd0c76g0'
@@ -254,7 +260,7 @@ try {
   foreach ($case in @(
     @{ Point = 'already-running'; Message = 'Quit Codex from its tray menu*' },
     @{ Point = 'override'; Message = '-UseOfficialProfile requires a standalone background launch*' },
-    @{ Point = 'unsupported'; Message = 'This Codex Store build has not been verified*' }
+    @{ Point = 'unsupported'; Message = 'The Codex Store package identity is not supported*' }
   )) {
     $script:officialFailurePoint = $case.Point
     $script:packageActivated = $false

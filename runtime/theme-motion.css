@@ -405,6 +405,52 @@ html:root[data-dream-motion="full"][data-dream-motion-paused="false"][data-dream
   animation-play-state: running;
 }
 
+/* Yuuka's registered anime frame uses smooth edges rather than pixel eyelids.
+   Masks stay fixed while the two side locks drift within a 9 source-pixel range. */
+/* Isolate a body painting context: its own wallpaper paints first, negative
+   owned artwork next, then the native main's translucent readability scrim.
+   Otherwise z-index:0 crops bypass that scrim and appear as dark rectangles. */
+html:root[data-dream-motion][data-dream-motion-art-profile="yuuka"] body {
+  isolation: isolate;
+}
+html:root[data-dream-motion][data-dream-motion-art-profile="yuuka"] [data-dream-motion-owned][data-dream-motion-role="background-character"] {
+  z-index: -1;
+}
+html:root[data-dream-motion] [data-dream-motion-owned] > svg[data-dream-motion-yuuka] {
+  shape-rendering: auto;
+}
+html:root[data-dream-motion] [data-dream-motion-owned] [data-dream-motion-yuuka-region][data-dream-motion-region-visible="false"] {
+  display: none;
+}
+html:root[data-dream-motion] [data-dream-motion-owned] [data-dream-motion-yuuka-blink] {
+  opacity: 0;
+}
+html:root[data-dream-motion] [data-dream-motion-owned] [data-dream-motion-yuuka-hair] {
+  transform: none;
+}
+html:root[data-dream-motion="full"][data-dream-motion-paused="false"][data-dream-motion-character="on"][data-dream-motion-route="home"] [data-dream-motion-owned][data-dream-motion-art-visible="true"] [data-dream-motion-yuuka-blink] {
+  animation: dream-yuuka-blink 7.4s linear infinite;
+}
+html:root[data-dream-motion="full"][data-dream-motion-paused="false"][data-dream-motion-character="on"][data-dream-motion-route="home"] [data-dream-motion-owned][data-dream-motion-art-visible="true"] [data-dream-motion-yuuka-hair] {
+  animation: dream-yuuka-hair 4.8s ease-in-out infinite;
+}
+html:root[data-dream-motion] [data-dream-motion-owned] [data-dream-motion-yuuka-hair="3"] {
+  animation-delay: -1.8s;
+}
+@keyframes dream-yuuka-blink {
+  0%, 37.8%, 40.8%, 82.8%, 85.8%, 100% { opacity: 0; }
+  38.5%, 40.0%, 83.5%, 85.0% { opacity: 1; }
+}
+@keyframes dream-yuuka-hair {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(5px, 1.2px); }
+  75% { transform: translate(-4px, -0.8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:root[data-dream-motion] [data-dream-motion-owned] [data-dream-motion-yuuka-blink],
+  html:root[data-dream-motion] [data-dream-motion-owned] [data-dream-motion-yuuka-hair] { animation: none !important; }
+}
+
 /* P-chan stays inside the existing character reservation. Its pink fur and
    dark outline stay recognizable in both light and dark built-in themes. */
 html:root[data-dream-motion] [data-dream-motion-owned][data-dream-motion-role="character"] {

@@ -56,9 +56,13 @@ if ($definition.Contains('ssPostInstall')) {
 foreach ($requiredDefinition in @(
   'PrivilegesRequired=lowest',
   'ArchitecturesAllowed=x64compatible',
-  'ChangesAssociations=yes',
-  'AppUpdatesURL=https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose/releases',
-  'OutputBaseFilename=CodexDreamSkin-Setup-v{#AppVersion}',
+  'ChangesAssociations=no',
+  '#define AppName "Codex Dream Skin Yuuka"',
+  '#define AppUrl "https://github.com/longly-boat/Codex-Dream-Skin-Yuuka"',
+  'AppId={{D73D9307-E171-4548-9F95-F92DCC5CF464}',
+  'DefaultDirName={localappdata}\Programs\CodexDreamSkinYuuka',
+  'AppUpdatesURL=https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases',
+  'OutputBaseFilename=CodexDreamSkinYuuka-Setup-v{#AppVersion}',
   'Source: "{#StageRoot}\payload\*"',
   'DestDir: "{app}\payload"',
   'Flags: unchecked',
@@ -72,35 +76,30 @@ foreach ($requiredDefinition in @(
   "ExtractTemporaryFiles('{tmp}\setup-bootstrap.ps1');",
   "ExtractTemporaryFiles('{tmp}\payload\*');",
   "RunBootstrap(TemporaryBootstrap, '-Install', WizardSilent, ExitCode)",
-  "RaiseException('Codex Dream Skin initialization could not be started.');",
+  "RaiseException('Codex Dream Skin Yuuka initialization could not be started.');",
   'procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);',
   'if CurUninstallStep <> usUninstall then',
   "RunBootstrap(ExpandConstant('{app}\setup-bootstrap.ps1'), '-Uninstall', True, ExitCode)",
-  "'Codex Dream Skin could not restore Codex (exit code ' +",
-  "IntToStr(ExitCode) + '). No installed files were removed.'",
-  '[Registry]',
-  'Root: HKCU; Subkey: "Software\Classes\dreamskin"',
-  'ValueName: "URL Protocol"; ValueData: ""',
-  'Software\Classes\dreamskin\shell\open\command',
-  '{localappdata}\CodexDreamSkin\engine\scripts\apply-community-theme.ps1',
-  '""%1""'
+  "'Codex Dream Skin Yuuka could not restore Codex (exit code ' +",
+  "IntToStr(ExitCode) + '). No installed files were removed.'"
 )) {
   if (-not $definition.Contains($requiredDefinition)) {
     throw "Inno Setup definition is missing a release safety contract: $requiredDefinition"
   }
 }
-if ($definition.Contains('Root: HKLM') -or
+if ($definition.Contains('[Registry]') -or
+  $definition.Contains('Software\Classes\dreamskin') -or
   $definition.Contains('dreamskin://apply?url=') -or
-  [regex]::Matches($definition, '(?m)^Root: HKCU; Subkey: "Software\\Classes\\dreamskin').Count -ne 4) {
-  throw 'The dreamskin protocol must be a four-entry current-user registration with no arbitrary URL contract.'
+  $definition.Contains('DCCDAF1A-9ACD-4AAB-B55B-DF17EB2CDA2E')) {
+  throw 'The Yuuka installer must not claim the upstream AppId or its URL protocol.'
 }
 if (-not $definition.Contains('#define PersistentPowerShellPath "{win}\System32\WindowsPowerShell\v1.0\powershell.exe"')) {
-  throw 'Persistent shortcuts and URL handlers must use a System32 PowerShell path that 64-bit launchers can access.'
+  throw 'Persistent shortcuts must use a System32 PowerShell path that 64-bit launchers can access.'
 }
 $persistentCommandEntries = @(
-  'Name: "{group}\Codex Dream Skin"',
-  'Name: "{userstartup}\Codex Dream Skin"',
-  'Subkey: "Software\Classes\dreamskin\shell\open\command"'
+  'Name: "{group}\Codex Dream Skin Yuuka"',
+  'Name: "{userdesktop}\Codex Dream Skin Yuuka"',
+  'Name: "{userstartup}\Codex Dream Skin Yuuka"'
 )
 foreach ($entry in $persistentCommandEntries) {
   $line = ([regex]::Match(
@@ -124,7 +123,7 @@ $runBootstrapIndex = $definition.IndexOf(
   [System.StringComparison]::Ordinal
 )
 $uninstallFailureIndex = $definition.LastIndexOf(
-  "'Codex Dream Skin could not restore Codex (exit code ' +",
+  "'Codex Dream Skin Yuuka could not restore Codex (exit code ' +",
   [System.StringComparison]::Ordinal
 )
 if ($uninstallStepIndex -lt 0 -or $runBootstrapIndex -le $uninstallStepIndex -or
@@ -158,14 +157,26 @@ foreach ($requiredBuilderContract in @(
   'Copy-ZipEntry -Archive $zip -EntryName "$($manifest.licenseEntry)"',
   '$defaultThemeImageSha256',
   '$defaultThemeSha256',
+  '$defaultThemeCssSha256',
+  '$nightThemeSha256',
+  '$yuukaIconSha256',
+  '$yuukaPngSha256',
   '$innoChineseLanguageSha256',
   '$innoSetupLicenseSha256',
   'Copy-Item -LiteralPath $innoChineseLanguagePath',
-  "'assets\internet-angel-tray.ico'",
-  "'assets\internet-angel-tray.png'",
+  "'assets\yuuka-tray.ico'",
+  "'assets\yuuka-tray.png'",
+  "'assets\yuuka-art.mjs'",
+  "'assets\yuuka-skin.css'",
+  "'assets\background.png'",
+  "'assets\theme.css'",
+  "'presets\yuuka-seminar\theme.json'",
+  "'presets\yuuka-seminar-night\theme.json'",
   '$stagedDefaultImageHash',
   '$stagedDefaultThemeHash',
-  'Staged installer payload did not retain the reviewed Internet Angel JPEG theme.',
+  '$stagedDefaultThemeCssHash',
+  'Staged installer payload did not retain the reviewed Yuuka PNG theme and Safe CSS.',
+  'Staged reviewed theme asset changed:',
   'Installer payload contains a removed bundled theme:',
   "'assets\theme-package-validator.mjs'",
   "'assets\theme-preferences.mjs'",
@@ -175,11 +186,15 @@ foreach ($requiredBuilderContract in @(
   "'assets\safe-css-validator.mjs'",
   "'scripts\validate-safe-css-file.mjs'",
   "'scripts\apply-community-theme.ps1'",
+  "'scripts\auto-launch-hidden.cs'",
+  "'scripts\yuuka-migration.ps1'",
+  "-ExcludedNames @('auto-launch-hidden.exe')",
   "'scripts\patch-dream-skin.ps1'",
   "'LICENSE.txt'",
   "'NOTICE.md'",
+  "`$noticePath = Join-Path `$windowsRoot 'NOTICE.md'",
   "Write-DreamSkinIcon -Path",
-  '"CodexDreamSkin-Setup-v$version.exe"'
+  '"CodexDreamSkinYuuka-Setup-v$version.exe"'
 )) {
   if (-not $builder.Contains($requiredBuilderContract)) {
     throw "Windows release builder is missing a required operation: $requiredBuilderContract"
@@ -189,6 +204,74 @@ foreach ($requiredBuilderContract in @(
 foreach ($unexpectedBundledPreset in @('preset-gothic-void-crusade', 'preset-arina-hashimoto')) {
   if ($builder.Contains($unexpectedBundledPreset) -or $bootstrap.Contains($unexpectedBundledPreset)) {
     throw "Installer paths must not bundle or require the removed preset: $unexpectedBundledPreset"
+  }
+}
+
+# Verify the actual release inputs, not only the builder's string contracts.
+$repositoryRoot = Split-Path -Parent $windowsRoot
+function Get-ReviewedAssetHash {
+  param([string]$Path, [bool]$NormalizeText)
+  if (-not $NormalizeText) {
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  }
+  $text = [System.IO.File]::ReadAllText($Path).Replace("`r`n", "`n").Replace("`r", "`n")
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return (($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($text)) |
+      ForEach-Object { $_.ToString('x2') }) -join '')
+  } finally { $sha.Dispose() }
+}
+function Get-BuilderPinnedHash {
+  param([string]$Variable)
+  $assignment = $builderAst.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+      $node.Left -is [System.Management.Automation.Language.VariableExpressionAst] -and
+      $node.Left.VariablePath.UserPath -ceq $Variable
+  }, $true)
+  if ($null -eq $assignment) { throw "Missing pinned asset hash: $Variable" }
+  $literal = $assignment.Right.Find({
+    param($node)
+    $node -is [System.Management.Automation.Language.StringConstantExpressionAst]
+  }, $true)
+  if ($null -eq $literal -or $literal.Value -cnotmatch '^[0-9a-f]{64}$') {
+    throw "Asset hash must be a literal SHA-256 value: $Variable"
+  }
+  return $literal.Value
+}
+$themeInputs = @(
+  @{ Directory = 'assets'; Source = 'yuuka'; Id = 'yuuka-seminar'; Appearance = 'light'; MetadataHash = 'defaultThemeSha256' },
+  @{ Directory = 'presets\yuuka-seminar'; Source = 'yuuka'; Id = 'yuuka-seminar'; Appearance = 'light'; MetadataHash = 'defaultThemeSha256' },
+  @{ Directory = 'presets\yuuka-seminar-night'; Source = 'yuuka-night'; Id = 'yuuka-seminar-night'; Appearance = 'dark'; MetadataHash = 'nightThemeSha256' }
+)
+foreach ($themeInput in $themeInputs) {
+  $themeRoot = Join-Path $windowsRoot $themeInput.Directory
+  $theme = [System.IO.File]::ReadAllText((Join-Path $themeRoot 'theme.json')) | ConvertFrom-Json
+  if ($theme.id -cne $themeInput.Id -or $theme.appearance -cne $themeInput.Appearance -or
+    $theme.image -cne 'background.png') {
+    throw "Unexpected Yuuka release theme: $($themeInput.Directory)"
+  }
+  foreach ($file in @(
+    @{ Name = 'theme.json'; Hash = $themeInput.MetadataHash; Text = $true },
+    @{ Name = 'theme.css'; Hash = 'defaultThemeCssSha256'; Text = $true },
+    @{ Name = 'background.png'; Hash = 'defaultThemeImageSha256'; Text = $false }
+  )) {
+    $actualHash = Get-ReviewedAssetHash -Path (Join-Path $themeRoot $file.Name) -NormalizeText $file.Text
+    $referencePath = Join-Path (Join-Path $repositoryRoot $themeInput.Source) $file.Name
+    if ($actualHash -cne (Get-BuilderPinnedHash -Variable $file.Hash) -or
+      $actualHash -cne (Get-ReviewedAssetHash -Path $referencePath -NormalizeText $file.Text)) {
+      throw "Yuuka release asset differs from the reviewed original: $($themeInput.Directory)\$($file.Name)"
+    }
+  }
+}
+foreach ($iconInput in @(
+  @{ Name = 'yuuka-tray.ico'; Hash = 'yuukaIconSha256' },
+  @{ Name = 'codex-dream-skin.ico'; Hash = 'yuukaIconSha256' },
+  @{ Name = 'yuuka-tray.png'; Hash = 'yuukaPngSha256' }
+)) {
+  if ((Get-ReviewedAssetHash -Path (Join-Path (Join-Path $windowsRoot 'assets') $iconInput.Name) -NormalizeText $false) -cne
+    (Get-BuilderPinnedHash -Variable $iconInput.Hash)) {
+    throw "The Yuuka installer icon differs from its reviewed asset: $($iconInput.Name)"
   }
 }
 
@@ -284,10 +367,10 @@ try {
     (Get-FileHash -LiteralPath $secondIcon -Algorithm SHA256).Hash) {
     throw 'Generated Windows icon is not deterministic.'
   }
-  $sourceIcon = Join-Path $windowsRoot 'assets\internet-angel-tray.ico'
+  $sourceIcon = Join-Path $windowsRoot 'assets\yuuka-tray.ico'
   if ((Get-FileHash -LiteralPath $firstIcon -Algorithm SHA256).Hash -cne
     (Get-FileHash -LiteralPath $sourceIcon -Algorithm SHA256).Hash) {
-    throw 'Windows application icon does not match the Internet Angel icon.'
+    throw 'Windows application icon does not match the Yuuka icon.'
   }
 
   $icon = [System.IO.File]::ReadAllBytes($firstIcon)

@@ -1,10 +1,11 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [ValidateRange(1024, 65535)][int]$Port = 9335,
   [switch]$ProtectCurrentSession,
+  [switch]$TakeOverStartupSession,
   [ValidateRange(250, 60000)][int]$PollIntervalMilliseconds = 1000,
   [ValidateRange(250, 60000)][int]$StableZeroMilliseconds = 1000,
-  [ValidateRange(0, 300000)][int]$GracePeriodMilliseconds = 3000,
+  [ValidateRange(0, 300000)][int]$GracePeriodMilliseconds = 1000,
   [ValidateRange(0, 300000)][int]$StartupBaselineMilliseconds = 10000,
   [switch]$SelfTest
 )
@@ -349,7 +350,7 @@ function Invoke-DreamSkinAutoLaunchSelfTest {
   Assert-DreamSkinAutoLaunchTest (-not $step.State.Suppressed -and -not $step.State.UntrustedSinceZero) `
     'a stable trusted-zero boundary must clear the observation failure latch'
 
-  Write-Host 'Codex Dream Skin auto-launch state machine self-test passed.'
+  Write-Host 'Codex Dream Skin Yuuka auto-launch state machine self-test passed.'
 }
 
 if ($SelfTest) {
@@ -365,6 +366,66 @@ $script:DreamSkinAutoLaunchInstallCacheAt = [DateTime]::MinValue
 $watcherProcess = Get-Process -Id $PID -ErrorAction Stop
 try { $script:DreamSkinAutoLaunchSessionId = [int]$watcherProcess.SessionId } finally {
   $watcherProcess.Dispose()
+}
+
+function Read-DreamSkinAutoLaunchOutputTail {
+  param([Parameter(Mandatory = $true)][string]$Path)
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return @() }
+  Assert-DreamSkinAutoLaunchPlainFile -Path $Path
+  $stream = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read,
+    [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
+  try {
+    # Snapshot the size: a still-running descendant may retain stdout.
+    # Never wait for EOF or read an unbounded launcher log.
+    $length = [int][Math]::Min(65536, $stream.Length)
+    [void]$stream.Seek(-$length, [IO.SeekOrigin]::End)
+    $bytes = New-Object byte[] $length
+    $count = $stream.Read($bytes, 0, $length)
+    return @(([Text.Encoding]::UTF8.GetString($bytes, 0, $count) -split "`r?`n") | Select-Object -Last 30)
+  } finally { $stream.Dispose() }
+}
+
+function Invoke-DreamSkinAutoLaunchStarter {
+  param(
+    [Parameter(Mandatory = $true)][string]$PowerShellPath,
+    [Parameter(Mandatory = $true)][string]$StartScript,
+    [Parameter(Mandatory = $true)][string]$StateRoot,
+    [Parameter(Mandatory = $true)][string]$AutoRestartReservationToken,
+    [ValidateRange(0, 300000)][int]$OperationLockTimeoutMilliseconds
+  )
+  $ErrorActionPreference = 'Stop'
+  $outputRoot = Join-Path $StateRoot ('.auto-launch-output-' + [guid]::NewGuid().ToString('N'))
+  Ensure-DreamSkinManagedDirectory -Path $outputRoot -Root $StateRoot
+  $stdout = Join-Path $outputRoot 'stdout.log'
+  $stderr = Join-Path $outputRoot 'stderr.log'
+  $launcher = $null
+  try {
+    $arguments = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned',
+      '-File', $StartScript, '-AutoRestartStock', '-AutoRestartReservationToken',
+      $AutoRestartReservationToken, '-RequireUnpaused', '-OperationLockTimeoutMilliseconds',
+      "$OperationLockTimeoutMilliseconds")
+    $argumentLine = ($arguments | ForEach-Object { ConvertTo-DreamSkinProcessArgument -Value $_ }) -join ' '
+    $launcher = Start-Process -FilePath $PowerShellPath -ArgumentList $argumentLine `
+      -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    $null = $launcher.Handle
+    # Wait only for the guarded launcher. Start-Process -Wait and a native
+    # output pipeline can also wait for its newly launched Codex descendants.
+    while (-not $launcher.WaitForExit(1000)) {}
+    $exitCode = $launcher.ExitCode
+    $output = @()
+    foreach ($path in @($stdout, $stderr)) {
+      try { $output += @(Read-DreamSkinAutoLaunchOutputTail -Path $path) } catch {
+        $output += 'Launcher output could not be read; the process exit code is preserved.'
+      }
+    }
+    return [pscustomobject]@{ ExitCode = $exitCode; Output = $output }
+  } finally {
+    if ($null -ne $launcher) { $launcher.Dispose() }
+    try { Remove-DreamSkinManagedDirectoryVerified -Path $outputRoot -Root $StateRoot } catch {
+      # A descendant retaining a handle is not a reason to stop Codex or
+      # change a successful result. Keep the small diagnostic directory.
+    }
+  }
 }
 
 function Get-DreamSkinAutoLaunchObservation {
@@ -397,7 +458,7 @@ function Get-DreamSkinAutoLaunchObservation {
     # The one final confirmation pins every target to its PID, creation time,
     # executable and validated Store package. Keep this stronger second read
     # off the regular grace scans so the background watcher stays lightweight.
-    $snapshot = Get-DreamSkinRegisteredCodexProcessSnapshot -RegisteredInstalls $installs
+    $snapshot = Get-DreamSkinRegisteredCodexProcessSnapshot -RegisteredInstalls $installs -MainProcessOnly
     $registeredProcesses = @($snapshot.Processes)
     $targetProcesses = @($snapshot.TargetProcesses)
   } else {
@@ -556,7 +617,7 @@ function Write-DreamSkinAutoLaunchState {
   Write-DreamSkinUtf8FileAtomically -Path $Path -Content (($state | ConvertTo-Json -Depth 5) + "`r`n")
 }
 
-$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
 $StopMarkerPath = Join-Path $StateRoot 'auto-launch.stop'
 $PauseMarkerPath = Join-Path $StateRoot 'paused'
 $StatePath = Join-Path $StateRoot 'auto-launch-state.json'
@@ -666,8 +727,9 @@ try {
       }
       $nowMilliseconds = [int64]$clock.ElapsedMilliseconds
     }
-    $startupBaselineActive = -not $baselineScanComplete -or
-      $nowMilliseconds -lt $StartupBaselineMilliseconds
+    $startupBaselineActive = (-not $baselineScanComplete -or
+      $nowMilliseconds -lt $StartupBaselineMilliseconds) -and
+      (-not $TakeOverStartupSession -or $ProtectCurrentSession)
     $observation = $null
     $transition = $null
     try {
@@ -730,8 +792,19 @@ try {
       # consumes this session's sole attempt without touching Codex.
       $confirmed = $false
       try {
-        $confirmation = Get-DreamSkinAutoLaunchObservation -DebugPort $Port `
-          -CaptureTargetProcesses
+        # Startup renderers may exit during identity capture. Retry the whole
+        # read-only observation; never skip a process or reuse a partial snapshot.
+        $confirmation = $null
+        for ($captureAttempt = 0; $captureAttempt -lt 3; $captureAttempt++) {
+          try {
+            $confirmation = Get-DreamSkinAutoLaunchObservation -DebugPort $Port `
+              -CaptureTargetProcesses
+            break
+          } catch {
+            if ($captureAttempt -eq 2) { throw }
+            Start-Sleep -Milliseconds 250
+          }
+        }
         $confirmed = $confirmation.ProcessCount -gt 0 -and
           @($confirmation.TargetProcesses).Count -eq $confirmation.ProcessCount -and
           -not $confirmation.HasVerifiedCdp -and -not $confirmation.HasDebugIntent
@@ -771,14 +844,24 @@ try {
             $launcherExitCode = 0
             $lastObservationDetail = 'disabled-or-paused-after-reservation'
           } else {
-            & $powershell -NoProfile -ExecutionPolicy RemoteSigned -File $StartScript `
-              -AutoRestartStock -AutoRestartReservationToken $attemptToken -RequireUnpaused
-            $launcherExitCode = $LASTEXITCODE
+            # Login also starts the tray, which briefly owns the operation
+            # lock while initializing the theme store. Wait for that owner
+            # instead of consuming the session's sole takeover attempt.
+            # The launcher revalidates this reservation and process identity
+            # after acquiring the lock; no post-launch failure is retried.
+            $launcherResult = Invoke-DreamSkinAutoLaunchStarter -PowerShellPath $powershell `
+              -StartScript $StartScript -StateRoot $StateRoot `
+              -AutoRestartReservationToken $attemptToken -OperationLockTimeoutMilliseconds 15000
+            $launcherOutput = $launcherResult.Output
+            $launcherExitCode = $launcherResult.ExitCode
+            foreach ($line in @($launcherOutput | Select-Object -Last 30)) {
+              Write-DreamSkinAutoLaunchLog -Path $LogPath -Message ("Launcher: " + "$line")
+            }
           }
         } finally {
           $ErrorActionPreference = $previousNativePreference
         }
-        if ($launcherExitCode -eq 0) {
+        if ($launcherExitCode -eq 0 -and -not (@($launcherOutput) -match 'Automatic Dream Skin restart skipped:')) {
           Write-DreamSkinAutoLaunchLog -Path $LogPath -Message 'Stock-session restart completed successfully.'
         } else {
           $lastErrorMessage = "start-dream-skin.ps1 exited with code $launcherExitCode"

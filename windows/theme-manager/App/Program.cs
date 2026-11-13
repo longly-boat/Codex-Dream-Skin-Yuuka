@@ -33,7 +33,7 @@ internal sealed class ManagerForm : Form
         _ => culture.TwoLetterISOLanguageName == "zh"
     };
     private readonly bool chinese = UsesChinese(Environment.GetEnvironmentVariable("DREAMSKIN_LANG"), CultureInfo.CurrentUICulture);
-    private readonly ThemeStore store = new(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CodexDreamSkin"));
+    private readonly ThemeStore store = new(ProductIdentity.StateRoot);
     private readonly Label activeLabel = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
     private readonly Label valueLabel = new() { AutoSize = true };
     private readonly Label status = new() { AutoSize = true, MaximumSize = new Size(560, 0) };
@@ -54,7 +54,7 @@ internal sealed class ManagerForm : Form
 
     public ManagerForm()
     {
-        Text = Copy("DreamSkin · Theme Manager", "DreamSkin · 主题管理");
+        Text = ProductIdentity.DisplayName + Copy(" · Theme Manager", " · 主题管理");
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         AutoScaleMode = AutoScaleMode.Dpi;
         ClientSize = new Size(600, 520);
@@ -129,7 +129,7 @@ internal sealed class ManagerForm : Form
                 }
                 finally { themes.EndUpdate(); }
             }
-            status.Text = saved.Count == 0 ? Copy("Import a theme from the DreamSkin tray to get started.", "从 DreamSkin 托盘导入主题后即可管理。") : Copy("Choose another theme in the tray before deleting the current theme.", "如需删除当前主题，请先在托盘切换到其他主题。");
+            status.Text = saved.Count == 0 ? Copy("Import a theme from the Yuuka tray to get started.", "从优香主题托盘导入主题后即可管理。") : Copy("Choose another theme in the tray before deleting the current theme.", "如需删除当前主题，请先在托盘切换到其他主题。");
             UpdateDelete();
         }
         catch (Exception ex) { slider.Enabled = follow.Enabled = delete.Enabled = false; status.Text = ErrorText(ex); }

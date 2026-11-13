@@ -11,18 +11,18 @@ Add-Type -AssemblyName Microsoft.VisualBasic
 
 Assert-DreamSkinPort -Port $Port
 $SkillRoot = Split-Path -Parent $PSScriptRoot
-$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+$StateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
 $paths = $null
 $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
 $startScript = Join-Path $PSScriptRoot 'start-dream-skin.ps1'
 $restoreScript = Join-Path $PSScriptRoot 'restore-dream-skin.ps1'
 $checkUpdateScript = Join-Path $PSScriptRoot 'check-update.ps1'
-$startupShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'Codex Dream Skin.lnk'
+$startupShortcut = Join-Path ([Environment]::GetFolderPath('Startup')) 'Codex Dream Skin Yuuka.lnk'
 
 $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-$mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkin.$sid.Tray")
+$mutex = [System.Threading.Mutex]::new($false, "Local\CodexDreamSkinYuuka.$sid.Tray")
 $showEvent = [System.Threading.EventWaitHandle]::new($false,
-  [System.Threading.EventResetMode]::AutoReset, "Local\CodexDreamSkin.$sid.ShowWindow")
+  [System.Threading.EventResetMode]::AutoReset, "Local\CodexDreamSkinYuuka.$sid.ShowWindow")
 $acquired = $false
 $notify = $null
 $trayIcon = $null
@@ -47,7 +47,9 @@ try {
     exit 0
   }
 
-  $initializationLock = Enter-DreamSkinOperationLock
+  # The login watcher may win the lock first and be applying the theme.
+  # This only bounds contention; an uncontended startup acquires immediately.
+  $initializationLock = Enter-DreamSkinOperationLock -TimeoutMilliseconds 60000
   try {
     $paths = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot
   } finally {
@@ -55,7 +57,7 @@ try {
   }
 
   $notify = [System.Windows.Forms.NotifyIcon]::new()
-  $trayIconPath = Join-Path $SkillRoot 'assets\internet-angel-tray.ico'
+  $trayIconPath = Join-Path $SkillRoot 'assets\yuuka-tray.ico'
   if (Test-Path -LiteralPath $trayIconPath -PathType Leaf) {
     $trayIcon = [System.Drawing.Icon]::new($trayIconPath)
     $notify.Icon = $trayIcon
@@ -63,7 +65,7 @@ try {
     $notify.Icon = [System.Drawing.SystemIcons]::Application
   }
   $trayRestingIcon = $notify.Icon
-  $notify.Text = 'Codex Dream Skin'
+  $notify.Text = 'Codex Dream Skin Yuuka'
   $notify.Visible = $true
   $menu = [System.Windows.Forms.ContextMenuStrip]::new()
   $notify.ContextMenuStrip = $menu
@@ -72,7 +74,7 @@ try {
     param([string]$Message)
     [void][System.Windows.Forms.MessageBox]::Show(
       $Message,
-      'Codex Dream Skin',
+      'Codex Dream Skin Yuuka',
       [System.Windows.Forms.MessageBoxButtons]::OK,
       [System.Windows.Forms.MessageBoxIcon]::Error
     )
@@ -149,7 +151,7 @@ try {
     }
     Set-DreamSkinTrayApplyStatus -Message $message -Success $success
     $icon = if ($success) { [System.Windows.Forms.ToolTipIcon]::Info } else { [System.Windows.Forms.ToolTipIcon]::Warning }
-    $notify.ShowBalloonTip(3500, 'Codex Dream Skin', $message, $icon)
+    $notify.ShowBalloonTip(3500, 'Codex Dream Skin Yuuka', $message, $icon)
   }
 
   function Start-DreamSkinVerifiedTrayApply {
@@ -432,8 +434,8 @@ try {
     $script:trayThemeBusy = $script:trayApplyPending -or $script:trayThemeOperationDepth -gt 0 -or
       $script:trayThemeOperations.Count -gt 0
     $notify.Text = if ($script:trayThemeBusy) {
-      'Codex Dream Skin: ' + (Get-DreamSkinTrayText -Key 'ThemeOperationBusy')
-    } else { 'Codex Dream Skin' }
+      'Codex Dream Skin Yuuka: ' + (Get-DreamSkinTrayText -Key 'ThemeOperationBusy')
+    } else { 'Codex Dream Skin Yuuka' }
     if ($script:trayOperationFeedbackReady) { Update-DreamSkinTrayOperationIcon }
     if ($null -ne $script:trayBusyItem) { $script:trayBusyItem.Visible = $script:trayThemeBusy }
     foreach ($item in $script:trayThemeMenuItems) { $item.Enabled = -not $script:trayThemeBusy }
@@ -469,7 +471,7 @@ try {
     $shortcut.TargetPath = $powershell
     $shortcut.Arguments = "-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy RemoteSigned -File `"$PSScriptRoot\tray-dream-skin.ps1`""
     $shortcut.WorkingDirectory = $SkillRoot
-    $shortcut.Description = 'Start Codex Dream Skin in the notification area'
+    $shortcut.Description = 'Start Codex Dream Skin Yuuka in the notification area'
     $shortcut.IconLocation = "$trayIconPath,0"
     $shortcut.Save()
   }
@@ -542,7 +544,7 @@ try {
           [System.Windows.Forms.ToolTipIcon]::Warning
         }
         $removalMessage = $removal.Message
-        $notify.ShowBalloonTip(2800, 'Codex Dream Skin', $removalMessage, $icon)
+        $notify.ShowBalloonTip(2800, 'Codex Dream Skin Yuuka', $removalMessage, $icon)
         if (-not $removal.Removed -and $removal.Attempted) {
           Show-DreamSkinTrayError -Message $removalMessage
         }
@@ -560,7 +562,7 @@ try {
               -StateRoot $StateRoot
             Set-DreamSkinPaused -Paused $false -StateRoot $StateRoot | Out-Null
           }
-          $notify.ShowBalloonTip(1800, 'Codex Dream Skin', (Get-DreamSkinTrayText -Key 'BackgroundUpdated'), [System.Windows.Forms.ToolTipIcon]::Info)
+          $notify.ShowBalloonTip(1800, 'Codex Dream Skin Yuuka', (Get-DreamSkinTrayText -Key 'BackgroundUpdated'), [System.Windows.Forms.ToolTipIcon]::Info)
         }
       } finally {
         $dialog.Dispose()
@@ -602,7 +604,7 @@ try {
           } else {
             [System.Windows.Forms.ToolTipIcon]::Info
           }
-          $notify.ShowBalloonTip(4200, 'Codex Dream Skin', $message, $messageIcon)
+          $notify.ShowBalloonTip(4200, 'Codex Dream Skin Yuuka', $message, $messageIcon)
         }
       } finally {
         $dialog.Dispose()
@@ -620,7 +622,7 @@ try {
         }
         $notify.ShowBalloonTip(
           1800,
-          'Codex Dream Skin',
+          'Codex Dream Skin Yuuka',
           (Get-DreamSkinTrayText -Key 'Saved' -FormatArguments @($saved.Theme.name)),
           [System.Windows.Forms.ToolTipIcon]::Info
         )
@@ -707,7 +709,7 @@ try {
     $manager = Join-Path $SkillRoot 'assets\theme-manager\DreamSkin.ThemeManager.exe'
     Assert-DreamSkinRuntimeTree -Path (Split-Path -Parent $manager)
     if (-not (Test-Path -LiteralPath $manager -PathType Leaf)) {
-      throw 'The native theme manager is missing. Reinstall Codex Dream Skin.'
+      throw 'The native theme manager is missing. Reinstall Codex Dream Skin Yuuka.'
     }
     $previousLanguage = $env:DREAMSKIN_LANG
     try {

@@ -39,7 +39,7 @@ test("native composer pseudo-elements and content geometry are not motion surfac
 
 test("shared full-mode timelines are bounded by role, route, state and pause", () => {
   const loops = leafRules.filter(({ body }) => /animation\s*:[^;]*\binfinite\b/.test(body));
-  assert.equal(loops.length, 11, "Shared motion is bounded to five base timelines and six compact legacy details");
+  assert.equal(loops.length, 13, "Shared motion has eleven original timelines and two artwork-bound Yuuka timelines");
   for (const { selector, body } of loops) {
     assert.ok(selector.includes('[data-dream-motion="full"]'));
     assert.ok(selector.includes('[data-dream-motion-paused="false"]'));
@@ -57,6 +57,28 @@ test("shared full-mode timelines are bounded by role, route, state and pause", (
     assert.doesNotMatch(body, /(?:filter|box-shadow|backdrop-filter|background-position|height|width)\s*:/,
       `Keyframes must not continuously repaint expensive native surfaces: ${selector}`);
   }
+});
+
+test("Yuuka loops animate only registered, visible owned artwork with no face geometry changes", () => {
+  assert.match(css, /data-dream-motion-art-profile="yuuka"\] body\s*\{\s*isolation: isolate;/);
+  assert.match(css, /data-dream-motion-art-profile="yuuka"\] \[data-dream-motion-owned\]\[data-dream-motion-role="background-character"\]\s*\{\s*z-index: -1;/);
+  const loops = leafRules.filter(({ body }) => /animation:\s*dream-yuuka-/.test(body));
+  assert.equal(loops.length, 2);
+  for (const { selector } of loops) {
+    assert.ok(selector.includes('[data-dream-motion-owned]'));
+    assert.ok(selector.includes('[data-dream-motion-art-visible="true"]'));
+    assert.ok(selector.includes('[data-dream-motion-character="on"]'));
+  }
+  const blink = css.match(/@keyframes dream-yuuka-blink\s*\{((?:[^{}]|\{[^{}]*\})*)\}/)?.[1];
+  assert.ok(blink);
+  assert.doesNotMatch(blink, /transform|translate|scale|rotate/);
+  const hair = css.match(/@keyframes dream-yuuka-hair\s*\{((?:[^{}]|\{[^{}]*\})*)\}/)?.[1];
+  assert.match(hair, /translate\(5px, 1\.2px\)/);
+  assert.match(hair, /translate\(-4px, -0\.8px\)/);
+  assert.doesNotMatch(hair, /filter|scale|rotate/);
+  const phase = leafRules.find(({ selector }) => selector.endsWith('[data-dream-motion-yuuka-hair="3"]'));
+  assert.ok(phase.selector.includes('[data-dream-motion-owned]'));
+  assert.match(phase.body, /animation-delay:\s*-1\.8s/);
 });
 
 test("shared eyelids halve the interval while preserving original half/closed gesture durations", () => {
@@ -133,7 +155,8 @@ test("icon feedback only targets marked SVGs and moves at most one pixel", () =>
 });
 
 test("card staggering is capped at four and ambient parallax is paint-only and clamped", () => {
-  const delays = leafRules.filter(({ body }) => /animation-delay\s*:/.test(body));
+  const delays = leafRules.filter(({ selector, body }) => /animation-delay\s*:/.test(body)
+    && !selector.includes('data-dream-motion-yuuka-hair'));
   assert.equal(delays.length, 3);
   for (let index = 1; index <= 3; index += 1) {
     const entry = delays.find(({ selector }) => selector.includes(`[data-dream-motion-index="${index}"]`));

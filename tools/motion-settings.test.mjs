@@ -52,7 +52,7 @@ test("platform paths use the dedicated state directory and reject relative/remot
   assert.equal(getMotionSettingsPath({ platform: "darwin", homeDir: "/Users/person", env: {} }),
     "/Users/person/Library/Application Support/CodexDreamSkinStudio/motion.json");
   assert.equal(getMotionSettingsPath({ platform: "win32", env: { LOCALAPPDATA: "C:\\Users\\person\\AppData\\Local" } }),
-    "C:\\Users\\person\\AppData\\Local\\CodexDreamSkin\\motion.json");
+    "C:\\Users\\person\\AppData\\Local\\CodexDreamSkinYuuka\\motion.json");
   assert.equal(getMotionSettingsPath({ platform: "linux", homeDir: "/home/person", env: {} }),
     "/home/person/.local/state/CodexDreamSkin/motion.json");
   assert.equal(getMotionSettingsPath({ platform: "linux", env: { XDG_STATE_HOME: "/custom state" } }),
@@ -81,12 +81,21 @@ test("writes create private state, persist all effects, and replace atomically",
   assert.deepEqual(await writeMotionSettings(settings, file), settings);
   assert.deepEqual(await readMotionSettings(file), settings);
   const oldHandle = await fs.open(file, "r");
+  const next = { ...settings, mode: "off" };
   try {
-    const next = { ...settings, mode: "off" };
-    await writeMotionSettings(next, file);
+    if (process.platform === "win32") {
+      // Windows may refuse replacement while another handle pins the old
+      // file. A refusal must preserve the previous value and clean staging.
+      try { await writeMotionSettings(next, file); }
+      catch (error) {
+        assert.equal(error.code, "EPERM");
+        assert.deepEqual(await readMotionSettings(file), settings);
+      }
+    } else { await writeMotionSettings(next, file); }
     assert.equal(JSON.parse(await oldHandle.readFile("utf8")).mode, "subtle");
-    assert.deepEqual(await readMotionSettings(file), next);
   } finally { await oldHandle.close(); }
+  await writeMotionSettings(next, file);
+  assert.deepEqual(await readMotionSettings(file), next);
   assert.deepEqual(await fs.readdir(path.dirname(file)), ["motion.json"]);
   if (process.platform !== "win32") {
     assert.equal((await fs.stat(path.dirname(file))).mode & 0o777, 0o700);
@@ -220,19 +229,29 @@ test("an ancestor redirected mid-write cannot publish or clean files in the new 
   const foreignContents = JSON.stringify({ ...defaults(), mode: "full" });
   await fs.writeFile(foreignFile, foreignContents);
   const nativeOpen = fs.open.bind(fs);
+  let redirected = false;
   const mocked = t.mock.method(fs, "open", async (requested, ...args) => {
     const handle = await nativeOpen(requested, ...args);
     if (String(requested).endsWith(".tmp")) {
-      await fs.rename(directory, retained);
-      await fs.symlink(target, directory, process.platform === "win32" ? "junction" : "dir");
+      try {
+        await fs.rename(directory, retained);
+        await fs.symlink(target, directory, process.platform === "win32" ? "junction" : "dir");
+        redirected = true;
+      } catch (error) { await handle.close(); throw error; }
     }
     return handle;
   });
-  await assert.rejects(writeMotionSettings({ ...defaults(), mode: "off" }, file), /ancestor changed/);
+  await assert.rejects(writeMotionSettings({ ...defaults(), mode: "off" }, file), (error) => {
+    // A Windows directory pinned by the lock/stage handle can itself refuse
+    // the attempted redirection. It must still leave both data sets intact.
+    if (!redirected && process.platform === "win32" && error.code === "EPERM") return true;
+    return /ancestor changed/.test(error.message);
+  });
   mocked.mock.restore();
   assert.equal(await fs.readFile(foreignFile, "utf8"), foreignContents);
   assert.deepEqual(await fs.readdir(target), ["motion.json"]);
-  assert.deepEqual(JSON.parse(await fs.readFile(path.join(retained, "motion.json"), "utf8")), defaults());
+  const original = redirected ? path.join(retained, "motion.json") : file;
+  assert.deepEqual(JSON.parse(await fs.readFile(original, "utf8")), defaults());
 });
 
 test("CLI mutations preserve unrelated preferences and reject malformed arguments", async (t) => {

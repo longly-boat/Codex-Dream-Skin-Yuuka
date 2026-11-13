@@ -3,7 +3,7 @@ param([switch]$DryRun)
 
 $ErrorActionPreference = 'Stop'
 $packageRoot = $PSScriptRoot
-$stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+$stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
 $patchScript = Join-Path $packageRoot 'scripts\patch-dream-skin.ps1'
 
 if (-not (Test-Path -LiteralPath $patchScript -PathType Leaf)) {

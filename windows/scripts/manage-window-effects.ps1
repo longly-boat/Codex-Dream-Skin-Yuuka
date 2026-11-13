@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [ValidateSet('Acrylic', 'System')]
   [string]$Set,
@@ -16,7 +16,7 @@ if ([bool]$Set -eq [bool]$Status) {
 
 $operationLock = Enter-DreamSkinOperationLock
 try {
-  $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkin'
+  $stateRoot = Join-Path $env:LOCALAPPDATA 'CodexDreamSkinYuuka'
   $settings = if ($Status) {
     Read-DreamSkinWindowEffects -StateRoot $stateRoot
   } else {

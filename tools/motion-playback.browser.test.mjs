@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {mkdtemp, realpath, rm, writeFile} from 'node:fs/promises';
+import {copyFile, mkdir, mkdtemp, realpath, rm, writeFile} from 'node:fs/promises';
 import {createRequire} from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
@@ -35,6 +35,14 @@ async function launch(t, material = 'system', platform = 'windows') {
   // canonical spelling of our own fixture directory rather than weakening it.
   const directory = await realpath(await mkdtemp(path.join(os.tmpdir(), 'dream-motion-browser-')));
   t.after(() => rm(directory, {recursive:true, force:true}));
+  // This regression suite covers the inherited Internet Angel/P-chan poses
+  // and exact JPEG eyelids. Select that pack explicitly: Windows now defaults
+  // to Yuuka, whose separate artwork/controller tests cover its own animation.
+  const themeDirectory = path.join(directory, 'internet-angel-theme');
+  await mkdir(themeDirectory);
+  for (const name of ['theme.json', 'dream-reference.jpg']) {
+    await copyFile(new URL(`../macos/assets/${name}`, import.meta.url), path.join(themeDirectory, name));
+  }
   const browser = await chromium.launch({headless:true,
     ...(process.env.DREAM_SKIN_BROWSER_EXECUTABLE ? {executablePath:process.env.DREAM_SKIN_BROWSER_EXECUTABLE} : {})});
   t.after(() => browser.close());
@@ -53,8 +61,8 @@ async function launch(t, material = 'system', platform = 'windows') {
     assert.deepEqual(await readMotionSettings(preferences), value,
       'the fixture preferences must pass the same strict reader used by the injector');
     const loaded = platform === 'windows'
-      ? await loadPayload(undefined, null, material, {motionSettingsPath:preferences})
-      : await (await import(`../${platform}/scripts/injector.mjs`)).loadPayload(undefined, {motionSettingsPath:preferences});
+      ? await loadPayload(themeDirectory, null, material, {motionSettingsPath:preferences})
+      : await (await import(`../${platform}/scripts/injector.mjs`)).loadPayload(themeDirectory, {motionSettingsPath:preferences});
     assert.equal(loaded.motionSettingsRejected, false, 'fixture preferences must not fall back to motion off');
     assert.deepEqual(loaded.motionSettings, value, 'the assembled payload must use the requested fixture preferences');
     await page.evaluate(loaded.payload);

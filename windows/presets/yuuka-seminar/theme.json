@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "yuuka-seminar",
+  "name": "优香 · 千年研讨会",
+  "brandSubtitle": "SCHALE × MILLENNIUM / SEMINAR",
+  "tagline": "老师，今天的计划就由我来帮您整理吧。",
+  "projectPrefix": "MISSION / ",
+  "projectLabel": "◇ 老师的工作计划",
+  "statusText": "SHITTIM CHEST / YUUKA",
+  "quote": "老师，每一份努力，都值得认真记录。",
+  "image": "background.png",
+  "appearance": "light",
+  "art": {
+    "focusX": 0.78,
+    "focusY": 0.42,
+    "safeArea": "left",
+    "taskMode": "ambient"
+  },
+  "colors": {
+    "background": "#eef6fc",
+    "panel": "#f7fbfff7",
+    "panelAlt": "#e8f1fbc7",
+    "accent": "#176baf",
+    "accentAlt": "#287eac",
+    "secondary": "#087b96",
+    "highlight": "#7662b4",
+    "text": "#1b2b49",
+    "muted": "#526882",
+    "line": "#bbcede"
+  }
+}

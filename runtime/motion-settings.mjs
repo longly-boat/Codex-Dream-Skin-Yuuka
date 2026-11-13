@@ -62,7 +62,7 @@ function absolutePath(value, api = path) {
 
 export function getMotionSettingsPath({ platform = process.platform, env = process.env, homeDir = os.homedir() } = {}) {
   if (platform === "win32") {
-    return path.win32.join(absolutePath(env.LOCALAPPDATA, path.win32), "CodexDreamSkin", "motion.json");
+    return path.win32.join(absolutePath(env.LOCALAPPDATA, path.win32), "CodexDreamSkinYuuka", "motion.json");
   }
   if (platform === "darwin") {
     return path.posix.join(absolutePath(homeDir, path.posix), "Library", "Application Support", "CodexDreamSkinStudio", "motion.json");

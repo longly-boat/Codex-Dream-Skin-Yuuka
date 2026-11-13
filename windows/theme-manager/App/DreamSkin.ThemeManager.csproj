@@ -8,6 +8,9 @@
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AssemblyName>DreamSkin.ThemeManager</AssemblyName>
+    <Product>Codex Dream Skin Yuuka</Product>
+    <Title>Codex Dream Skin Yuuka Theme Manager</Title>
+    <Description>Native theme management for the independent Yuuka edition.</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>../../assets/codex-dream-skin.ico</ApplicationIcon>
   </PropertyGroup>

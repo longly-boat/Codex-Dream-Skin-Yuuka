@@ -14,7 +14,48 @@ internal static class Program
             throw new Exception("Launcher language override or system fallback failed.");
         Console.WriteLine("PASS tray language override and system fallback");
 
+        if (Path.GetFileName(ProductIdentity.StateRoot) != "CodexDreamSkinYuuka" ||
+            ProductIdentity.DisplayName != "Codex Dream Skin Yuuka")
+            throw new Exception("Yuuka manager must use its independent product and state directory.");
+        Console.WriteLine("PASS Yuuka product identity and state isolation");
+
+        var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User!.Value;
+        foreach (var mutexName in new[] {
+            $"Global\\CodexDreamSkin.{sid}.Operation",
+            $"Local\\CodexDreamSkinYuuka.{sid}.ThemeImport"
+        })
+        {
+            using var external = new Mutex(false, mutexName);
+            if (!external.WaitOne(0)) throw new Exception("Close theme operations before the native integration tests.");
+            try
+            {
+                var rejected = Task.Run(() =>
+                {
+                    try { using var lease = new OperationLease(); return false; }
+                    catch (StoreException ex) when (ex.Message == "busy") { return true; }
+                }).GetAwaiter().GetResult();
+                if (!rejected) throw new Exception("Native manager ignored the PowerShell mutex: " + mutexName);
+            }
+            finally { external.ReleaseMutex(); }
+        }
+        Console.WriteLine("PASS shared PowerShell operation lock and independent Yuuka import lock");
+
         var instanceSuffix = ".Test-" + Guid.NewGuid().ToString("N");
+        using (var legacyWindow = new Mutex(false, $"Local\\CodexDreamSkin.{sid}.ThemeManager{instanceSuffix}"))
+        {
+            if (!legacyWindow.WaitOne(0)) throw new Exception("Legacy test window lock was unexpectedly occupied.");
+            try
+            {
+                var independent = Task.Run(() =>
+                {
+                    using var yuukaWindow = new SingleInstance(instanceSuffix);
+                    return yuukaWindow.IsPrimary;
+                }).GetAwaiter().GetResult();
+                if (!independent) throw new Exception("The upstream manager window blocked the Yuuka manager.");
+            }
+            finally { legacyWindow.ReleaseMutex(); }
+        }
+        Console.WriteLine("PASS upstream window does not intercept Yuuka manager activation");
         using (var primary = new SingleInstance(instanceSuffix))
         {
             if (!primary.IsPrimary || primary.TakeActivationRequest()) throw new Exception("First instance did not own its window.");

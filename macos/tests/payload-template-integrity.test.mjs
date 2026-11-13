@@ -304,7 +304,7 @@ test("helper-only renderer changes invalidate the real macOS payload revision", 
     for (const name of ["selectors.json", "dream-skin.css", "renderer-inject.js",
       "internet-angel-extension.css", "internet-angel-extension.js",
       "theme-package-validator.mjs", "safe-css-validator.mjs", "theme-preferences.mjs",
-      "motion-settings.mjs", "motion-payload.mjs", "theme-motion.js", "theme-motion.css"]) {
+      "motion-settings.mjs", "motion-payload.mjs", "yuuka-art.mjs", "theme-motion.js", "theme-motion.css"]) {
       await fs.copyFile(path.join(macosRoot, "assets", name), path.join(fixtureRoot, "assets", name));
     }
     await fs.writeFile(path.join(fixtureRoot, "assets", "css-predicate-cache.mjs"), source);

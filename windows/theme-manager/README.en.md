@@ -2,7 +2,9 @@
 
 [中文](README.md) · [English](README.en.md)
 
-Open **Codex Dream Skin** from the desktop or Start menu, or double-click its tray icon. Repeated launches activate the existing window.
+Open **Codex Dream Skin Yuuka** from the desktop or Start menu, or double-click its tray icon. Repeated launches activate the existing window.
+
+The theme library and preferences live in `%LOCALAPPDATA%\CodexDreamSkinYuuka`, independently of the upstream product's store and manager window.
 
 ## Use
 
@@ -10,7 +12,7 @@ Open **Codex Dream Skin** from the desktop or Start menu, or double-click its tr
 - Choose **Follow theme** to restore the author's setting, with 30% as the fallback. Preferences are stored in `theme-preferences.json`.
 - Select an inactive theme, choose **Move to Recycle Bin…**, and confirm to remove its local directory. Switch away from an active theme through the tray before deleting it. Source ZIPs, active snapshots, and recovery files are preserved.
 
-The manager shares per-user Operation and ThemeImport mutexes with the runtime and validates directory identity and paths.
+The manager shares the per-user global Operation mutex with both products' runtimes, preventing concurrent Codex changes. Its ThemeImport and window mutexes belong only to Yuuka. Theme operations still validate directory identity and paths.
 
 ## Build and checks
 
