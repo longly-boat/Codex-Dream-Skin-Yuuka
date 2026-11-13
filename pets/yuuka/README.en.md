@@ -49,10 +49,10 @@ There are 73 populated cells and 15 transparent unused cells. Look angles advanc
 
 ## Edit and rebuild
 
-Requires Python 3.10+, preferably in a virtual environment. Run from this package directory: enter `pets/yuuka` in a clone, or the extracted package directory after downloading the ZIP.
+Use Python 3.10–3.13 (3.13 is verified locally and in CI) with the pinned Pillow 11.2.1 dependency, preferably in a virtual environment. Run from this package directory: enter `pets/yuuka` in a clone, or the extracted package directory after downloading the ZIP.
 
 ```sh
-python -m pip install -r requirements.txt
+python -m pip install --only-binary=:all: -r requirements.txt
 python build.py --check
 python build.py --output /path/to/new-output-directory
 ```

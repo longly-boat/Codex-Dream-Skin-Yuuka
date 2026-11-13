@@ -49,10 +49,10 @@
 
 ## 修改与重建
 
-需要 Python 3.10+，建议先建立虚拟环境。以下在桌宠包目录执行：克隆仓库后先进入 `pets/yuuka`，下载 ZIP 则直接进入解压目录。
+使用 Python 3.10–3.13（本机与 CI 验证版本为 3.13），依赖固定为 Pillow 11.2.1；建议先建立虚拟环境。以下在桌宠包目录执行：克隆仓库后先进入 `pets/yuuka`，下载 ZIP 则直接进入解压目录。
 
 ```sh
-python -m pip install -r requirements.txt
+python -m pip install --only-binary=:all: -r requirements.txt
 python build.py --check
 python build.py --output /path/to/new-output-directory
 ```
