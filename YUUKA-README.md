@@ -38,7 +38,7 @@
 - 首页四张任务卡下方显示优香同人寄语，点击「换一句」切换。
 - 今日计划支持 Enter/添加、勾选、删除，即时保存，最多 100 项、每项 120 字。所有项目共用个人清单，不自动跨日清空，也不会发送聊天或创建 Codex 目标。
 
-单独主题 ZIP 只包含 `theme.json`、`theme.css`、`background.png`；专属动效与工作台需要优香引擎。独立桌宠不由安装包导入账号。
+单独主题 ZIP 只包含 `theme.json`、`theme.css`、`background.png`；专属动效与工作台需要优香引擎。[独立优香桌宠的源图、预览与构建工具](pets/yuuka/README.md) 已单独公开，通过分享页添加到自己的桌宠库，不由主题安装包导入账号。
 
 ## 源码构建与验证
 
@@ -62,6 +62,6 @@ powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File windows/installer/
 
 千年徽记参考 [Blue Archive Wiki 的 Millennium 图形](https://static.wikitide.net/bluearchivewiki/2/2a/Millennium.png)，小图标采用自行绘制的光环、档案夹、计算器等图形。不会宣称游戏标识为原创或获得官方授权。
 
-`TASK_PROGRESS.md`、`.local-evidence/`、个人桌宠配置、一次性本机修复脚本和旧 `dist/` 不属于公开发行内容。独立桌宠需要在账号中单独设置。
+`TASK_PROGRESS.md`、`.local-evidence/`、个人桌宠配置、一次性本机修复脚本和旧 `dist/` 不属于公开发行内容。公开桌宠文件仅在 `pets/yuuka/`，不包含私人账号记录；桌宠素材版本与 Windows 安装器版本分别管理。
 
 优香版是纯 vibe coding、AI 辅助实现的定制项目。如果遇到 bug，抱歉给你带来不便；请通过 [Issues](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues) 附上复现步骤、Codex 与主题版本，帮助定位问题。

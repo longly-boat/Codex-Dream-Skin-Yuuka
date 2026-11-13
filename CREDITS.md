@@ -23,6 +23,7 @@ Special thanks to the Internet Angel fork's maintainers and contributors. This d
 ## 素材与运行时
 
 - 优香壁纸和闭眼帧为 AI 生成的同人素材；角色与蔚蓝档案相关标识归相应权利人，软件 MIT 许可证不授予这些第三方权利。
+- [配套优香桌宠](pets/yuuka/README.md) 为本项目独立补充的 AI 同人素材，公开完整源图、动作布局、待机改进提示词和构建工具。其配套主题沿用上述上游基础；桌宠图像不归称为上游作者绘制，也不属于软件 MIT 授权范围，见 [桌宠素材声明](pets/yuuka/NOTICE.md)。
 - 千年标识几何参考：[Blue Archive Wiki](https://static.wikitide.net/bluearchivewiki/2/2a/Millennium.png)。其他功能小图标为本主题绘制。
 - Windows 安装器保留 Node.js 和 Inno Setup 所需的第三方许可说明，见 [安装包说明](windows/NOTICE.md)。
 

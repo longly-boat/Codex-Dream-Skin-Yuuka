@@ -39,7 +39,15 @@ v1.9.2 安装器**未做代码签名**，Windows 可能显示未知发布者或 
 
 首发通道仅发布 Windows 包。仓库保留 macOS/Linux 上游代码与共享资源，但其默认主题、安装身份和更新器尚未完成优香版适配，不作为本次支持平台。
 
-## 来源
+## 配套优香桌宠
+
+[直接添加桌宠](https://chatgpt.com/s/sharepet_6af711e160f88191a4508c5d0af094b2) · [源码、素材与使用说明](pets/yuuka/README.md) · [下载桌宠包 v1.0.0](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/yuuka-pet-v1.0.0)
+
+![优香桌宠待机](pets/yuuka/previews/idle.gif)
+
+包含 9 种动作、16 个视线方向，以及呼吸、眨眼、歪头轻触衣领的新版待机。完整透明图集、可编辑 PNG、待机提示词和独立构建工具现已公开。桌宠通过账号中的 Pets 功能单独添加，不包含在 Windows 主题安装器中。
+
+## 来源与许可
 
 保留上游 MIT 代码许可证与作者声明，见 [LICENSE](LICENSE)。壁纸为 AI 生成的同人图；角色、游戏名称和相关标识归各自权利人，代码许可证不授予这些角色或素材的权利。此项目不是 OpenAI、NEXON 或 NEXON Games 的官方产品。
 

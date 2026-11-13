@@ -1,0 +1,31 @@
+{
+  "checkedOn": "2026-11-13",
+  "scope": "Structural validation of the unchanged published atlas. This is not a new semantic certification of the retained animation rows.",
+  "atlasSha256": "c41c44dfa1370f17e058bbf0e3ca26c11665037546df80bfb9f64687c35017eb",
+  "pixelsMatchEditableSource": true,
+  "pixelsMatchCurrentCompanion": true,
+  "platform": {
+    "valid": true,
+    "file_size_bytes": 2608492,
+    "mime_type": "image/webp",
+    "width": 1536,
+    "height": 2288,
+    "sprite_version": 2,
+    "cell_width": 192,
+    "cell_height": 208,
+    "frames_per_row": [
+      6,
+      8,
+      8,
+      4,
+      5,
+      8,
+      6,
+      6,
+      6,
+      8,
+      8
+    ],
+    "errors": []
+  }
+}
