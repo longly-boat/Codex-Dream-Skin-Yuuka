@@ -1,0 +1,29 @@
+REVISION 2
+Revise this Yuuka desktop pet idle animation strip. Image 1 is the new six-frame strip to IMPROVE, image 2 is the current original pet identity/outfit reference. Output ONE transparent horizontal strip, exactly 6 equally spaced full-body frames, no background/text/labels/grid. Match the exact same petite chibi body scale, violet twin tails/eyes, cyan ellipse halo, fitted black school jacket, white collared shirt/blue tie, black pleated skirt, white/blue coat worn around shoulders, and black boots. Keep consistent crisp anime cel-shaded art. No new props or marks.
+
+The previous strip was too similar to an ordinary blink and its feet slid horizontally. Fix BOTH:
+- Lock BOTH BOOTS and LOWER LEGS to an identical position within every cell; one stable foot silhouette, exactly the same spacing and ground baseline. Do not sway or translate the whole character. No per-frame size change.
+- Make a readable little shy HEAD TILT and BREATHING cycle with soft jacket/hair follow-through. These are actual pose changes above a stable hip and grounded legs, not sprite translation.
+
+Six ordered keyframes:
+1 neutral upright, relaxed open eyes, hands at the original waist/coat positions, starting pose.
+2 small inhale: chest and shoulders rise 3px at final 192x208 scale; head starts tilting toward screen-right 4 degrees; longer hair starts swaying left; eyes warmly looking toward viewer.
+3 peak inhale and small shy tilt: head tilted screen-right 8 degrees, chin tucked a little; eyebrows softly relaxed; eyes half-close; one gloved hand very slightly pinches the white coat's lapel ABOVE THE WAIST with tiny finger motion, still attached to original wrist. Shoulders remain lifted. Hair follows the tilt smoothly. Keep lower legs EXACTLY fixed.
+4 gentle exhale with blink closed and tiny gentle smile, head eases from 8 to 5 degrees, shoulders lower, long hair lags a little the opposite way; hands release the tiny lapel pinch, no big arm gesture.
+5 eyes reopening and gaze returning to viewer; head returns nearly upright, shoulders at resting height, hair softly settles.
+6 EXACT starting neutral body/boot/hand/head pose matching frame 1, with almost identical hair outline so looping does not reset abruptly.
+
+At real desktop pet size, the tilted head, raised shoulders, subtle lapel touch, hair tips should be visibly different from neutral while calm, restrained and shy, not dancing or waving. Use stable proportions, naturally hinged head/neck, anatomically consistent hands. No foot slide, whole-body bob, global rotation, head enlargement, chest exaggeration, new jewelry, detached effects, shadows, floor or scenery. Keep ample transparent spacing and all halo/hair/boots fully in each of the six frames.
+
+REVISION 3
+Refine ONLY the motion continuity of this six-frame transparent Yuuka idle strip. Preserve the exact same character, outfit, head/body size, art style, cyan halo, legs and boots, transparent canvas and six equally spaced full-body slots. Do not add frames, backgrounds or labels.
+
+The current third pose touches the blue tie/white lapel shyly, but the hand pops up for just one frame. Make this a smooth small idle gesture over the whole six-frame loop:
+Frame 1: original resting neutral hand at side, open eyes, upright.
+Frame 2: SAME hand HALF-WAY up between its resting hip position and the upper lapel, forearm slightly bent and hand around lower ribs. Open eyes; gentle shoulder rise and head starts tilting.
+Frame 3: fingertips lightly resting on upper lapel near collarbone, as already shown, head gently tilted screen-right and eyes half closed.
+Frame 4: KEEP THAT SAME HAND lightly touching the upper lapel, relaxed shy smile, eyes fully closed for the blink, same tilt easing slightly. The hand must NOT drop to the side yet.
+Frame 5: lower the hand HALF-WAY back down to lower-rib level; eyes reopening; head almost upright, hair softly following.
+Frame 6: hand fully back to original relaxed position, EXACT same neutral head/body/boot/halo alignment and near-identical hair silhouette as frame 1.
+
+This should feel like one restrained bashful adjustment of the coat collar while breathing and blinking, not a wave or arm teleport. Feet and boot outlines absolutely stationary in all six cells, no horizontal slide. Natural connected upper arm/elbow/wrist/hand, no hand disappearing into the skirt. Gentle coherent hair follow-through, no new props, effects, shadow, text, grid or cropping. Return transparent alpha.

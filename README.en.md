@@ -39,6 +39,14 @@ The v1.9.2 installer is **not code-signed**. Windows may display an unknown-publ
 
 This release channel ships Windows only. The inherited macOS/Linux sources and shared assets remain in the repository, but their default themes, product identities and updaters are not supported Yuuka distributions.
 
+## Matching Yuuka companion
+
+[Add the shared pet](https://chatgpt.com/s/sharepet_6af711e160f88191a4508c5d0af094b2) · [Source, assets and instructions](pets/yuuka/README.en.md) · [Download pet v1.0.0](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/yuuka-pet-v1.0.0)
+
+![Yuuka idle animation](pets/yuuka/previews/idle.gif)
+
+Nine animation states, sixteen look directions, and an idle loop with breathing, blinking and a shy collar touch. The complete transparent atlas, editable PNG, retained idle prompts and standalone tooling are public. Add the pet separately through your account's Pets feature; it is not installed by the Windows theme Setup.
+
 ## Sources and license
 
 Code retains the upstream [MIT license and copyright notice](LICENSE). Artwork is AI-generated fan art; character and game marks belong to their respective owners and are not licensed by the code license. This is not an official OpenAI, NEXON or NEXON Games product.

@@ -1,0 +1,13 @@
+Edit the supplied existing Yuuka (Blue Archive) desktop pet references. Image 1 is the exact existing idle strip and character identity target. Image 2 is the full current sprite atlas for consistent outfit, proportions and linework ONLY. Return ONLY one transparent horizontal strip of exactly SIX evenly spaced full-body poses, left to right, NOT a full atlas. Wide canvas about 1536x384. Genuine alpha transparency, no background, no text, no labels, no grid.
+
+Purpose: a noticeably richer but calm idle loop for a small desktop companion. Preserve the SAME compact chibi purple-haired Yuuka, purple eyes, cyan halo, purple twin tails and long hair, black fitted school jacket with white collar and bright blue tie, white jacket worn around shoulders with blue lining, short black pleated skirt, belt and black boots. Do not redesign her face, costume, colors or body proportions. Match the reference's crisp cel shaded illustration and delicate dark outlines. Both feet remain planted at exactly the same common baseline and same location relative to each pose's cell. No foot movement, walking, waving, jumping, large gestures, new props or effects. Keep the cyan halo in its exact correct shape and head relationship.
+
+Six-pose sequence, designed as a gentle cyclic breath and tiny shy head tilt:
+1. Reference neutral, eyes open, calm small smile, relaxed shoulders and arms.
+2. Gentle inhalation, shoulders and chest rise only 2 pixels at 192x208 final scale, head starts tilting screen-right about 2 degrees, long hair tips follow gently left by 3-4 final pixels.
+3. Upper body at the breath peak, head tilt screen-right about 4 degrees, eyelids half closed beginning a blink, quiet faintly shy smile, jacket cuffs follow the shoulder lift.
+4. Soft eyes completely closed for the blink, head tilt eases back toward center, shoulders begin to relax, hair tips swing smoothly toward the other side. This is a tender idle blink, not sleeping.
+5. Eyes reopening, head almost upright, relaxed gentle smile, shoulders return to resting level, long hair and sleeve ends subtly settle.
+6. Eyes fully open, nearly IDENTICAL to pose 1 so last-to-first loops smoothly, hair finishes settling and hands remain attached in their original relaxed positions.
+
+Make the breath/head/hair differences readable at small pet size while subtle and natural. Body must not scale or slide between poses. No facial drift, melting hands, asymmetric missing limbs, detached ornaments, moving shadows or motion marks. Same whole-body scale, ample transparent separation between all six silhouettes, no cropping anywhere. Use one coherent artist-rendered sequence; do not simply duplicate the same frame six times.

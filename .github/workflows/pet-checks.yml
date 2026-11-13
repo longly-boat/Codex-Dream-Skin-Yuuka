@@ -1,0 +1,27 @@
+name: Yuuka pet assets
+
+on:
+  push:
+    branches: [main]
+    paths: ['pets/yuuka/**', '.github/workflows/pet-checks.yml']
+  pull_request:
+    paths: ['pets/yuuka/**', '.github/workflows/pet-checks.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  pet-package:
+    name: Validate and rebuild pet package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Prepare Python environment
+        run: |
+          python3 -m venv "$RUNNER_TEMP/yuuka-pet-venv"
+          "$RUNNER_TEMP/yuuka-pet-venv/bin/python" -m pip install -r pets/yuuka/requirements.txt
+          echo "$RUNNER_TEMP/yuuka-pet-venv/bin" >> "$GITHUB_PATH"
+      - name: Verify public file inventory and source pixels
+        run: python pets/yuuka/build.py --check
+      - name: Rebuild atlas and all animation previews
+        run: python pets/yuuka/build.py --output "$RUNNER_TEMP/yuuka-pet-rebuild"
