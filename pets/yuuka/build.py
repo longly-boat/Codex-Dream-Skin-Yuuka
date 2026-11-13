@@ -88,7 +88,7 @@ def build(output):
     metadata = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
     metadata["rgbaSha256"] = digest(source.tobytes())
     metadata["atlasSha256"] = digest(file.read_bytes())
-    (output / "manifest.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (output / "manifest.json").write_text(json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
     previews = output / "previews"
     previews.mkdir()
     all_frames = []

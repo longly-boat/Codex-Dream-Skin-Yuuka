@@ -28,6 +28,9 @@ windows/scripts/image-metadata.mjs text eol=lf
 macos/scripts/validate-safe-css-file.mjs text eol=lf
 windows/scripts/validate-safe-css-file.mjs text eol=lf
 
+# Published pet text participates in SHA256SUMS and must match on every OS.
+pets/yuuka/** text eol=lf
+
 # Keep artwork out of text normalization and text diffs.
 *.png binary
 *.jpg binary
