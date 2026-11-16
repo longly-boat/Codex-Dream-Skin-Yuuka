@@ -1,6 +1,11 @@
 # Changelog
 
-## 1.9.3 · 2026-11-16
+## 1.9.4 · 2026-11-16
+
+- 与 Windows 接管及退出确认修复同步版本号；macOS/Linux 行为未改，不发行优香 DMG 或 Linux 包。
+- v1.9.3 未公开发行安装包；本次公开更新说明见 [v1.9.4 中文](../docs/releases/v1.9.4.md) / [English](../docs/releases/v1.9.4-en.md)。
+
+## 1.9.3 · 2026-11-16 · 未公开发行安装包
 
 - 版本号与 Windows 自动接管修复保持一致；本次没有 macOS 行为改动，也不发行优香 DMG。
 - Windows 修复、升级范围和致谢见 [v1.9.3 中文](../docs/releases/v1.9.3.md) / [English](../docs/releases/v1.9.3-en.md)。

@@ -1,4 +1,4 @@
-# Windows Yuuka installation and updates · v1.9.3
+# Windows Yuuka installation and updates · v1.9.4
 
 [中文](install-windows.md) · [English](install-windows.en.md)
 
@@ -7,7 +7,7 @@ The first independent Windows Yuuka release supports Windows 10+ x64. Setup incl
 ## First installation
 
 1. Install official `OpenAI.Codex` from Microsoft Store, launch it successfully once, then exit.
-2. Download `CodexDreamSkinYuuka-Setup-v1.9.3.exe` and `SHA256SUMS.txt` from [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest), and verify the installer's SHA-256.
+2. Download `CodexDreamSkinYuuka-Setup-v1.9.4.exe` and `SHA256SUMS.txt` from [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest), and verify the installer's SHA-256.
 3. Run the installer and complete the wizard.
 4. Open **Codex Dream Skin Yuuka** from the Start menu, then right-click its tray icon and apply the theme. If Codex is running, save input and confirm the requested restart.
 
