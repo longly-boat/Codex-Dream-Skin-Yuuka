@@ -4,7 +4,7 @@
 
 A Yuuka / Blue Archive fan theme for Windows Codex Desktop, based on [the Internet Angel fork](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose).
 
-**v1.9.2 · First Yuuka release** · [Downloads and checksums](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.2) · [Release notes](docs/releases/v1.9.2-en.md) · [Report an issue](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues)
+**v1.9.3 · Automatic takeover fixes** · [Downloads and checksums](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.3) · [Release notes](docs/releases/v1.9.3-en.md) · [Report an issue](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues)
 
 > This is a **pure vibe coding project**: the Yuuka customization and fixes were implemented mainly with AI assistance, and some rough edges may remain. Sorry if you run into a bug. Please share reproduction steps and your Codex and theme versions in [Issues](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues) so we can improve it.
 
@@ -31,11 +31,11 @@ We also thank the earlier [Fei-Away/Codex-Dream-Skin](https://github.com/Fei-Awa
 
 Requires Windows 10 or later, x64, and the Microsoft Store version of Codex installed and successfully launched at least once. The installer bundles Node.js; normal use does not require a separate Node.js installation or .NET SDK.
 
-1. Get `CodexDreamSkinYuuka-Setup-v1.9.2.exe` and `SHA256SUMS.txt` from [the v1.9.2 Release](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.2). Verify the checksum before running Setup.
+1. Get `CodexDreamSkinYuuka-Setup-v1.9.3.exe` and `SHA256SUMS.txt` from [the v1.9.3 Release](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.3). Verify the checksum before running Setup.
 2. Open **Codex Dream Skin Yuuka**, apply the theme and optionally enable automatic takeover. You can keep using the original Codex taskbar icon; takeover still restarts Codex once.
-3. When migrating an earlier custom installation, disable its watcher and restore the original appearance first. See the [English release and migration notes](docs/releases/v1.9.2-en.md) or the [full Chinese usage and source-build guide](YUUKA-README.md).
+3. When migrating an earlier custom installation, disable its watcher and restore the original appearance first. See the [English migration notes](docs/releases/v1.9.2-en.md) or the [full Chinese usage and source-build guide](YUUKA-README.md).
 
-The v1.9.2 installer is **not code-signed**. Windows may display an unknown-publisher or SmartScreen prompt; runtime validation does not provide a publisher signature. Check the repository Release source and checksum. Do not update Yuuka with the upstream installer.
+The v1.9.3 installer is **not code-signed**. Windows may display an unknown-publisher or SmartScreen prompt; runtime validation does not provide a publisher signature. Check the repository Release source and checksum. Do not update Yuuka with the upstream installer.
 
 This release channel ships Windows only. The inherited macOS/Linux sources and shared assets remain in the repository, but their default themes, product identities and updaters are not supported Yuuka distributions.
 

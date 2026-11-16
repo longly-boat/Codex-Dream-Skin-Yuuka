@@ -1883,6 +1883,8 @@ args = [
   & (Join-Path $PSScriptRoot 'start-verified-skin-preserved.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-safety.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'startup-lock-contention.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'auto-launch-lock-retry.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'injector-pid-reuse.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-child-exit.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'official-profile-discovery.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-hidden.tests.ps1') -Root $Root

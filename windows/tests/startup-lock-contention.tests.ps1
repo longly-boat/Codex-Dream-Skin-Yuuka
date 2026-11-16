@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param([Parameter(Mandatory = $true)][string]$Root)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $Root 'scripts\common-windows.ps1')
 
 function Read-TestAst {
   param([string]$Path)

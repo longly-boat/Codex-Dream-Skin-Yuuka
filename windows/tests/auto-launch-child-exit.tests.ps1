@@ -7,7 +7,7 @@ $tokens = $null; $errors = $null
 $ast = [Management.Automation.Language.Parser]::ParseFile(
   (Join-Path $Root 'scripts\auto-launch-dream-skin.ps1'), [ref]$tokens, [ref]$errors)
 if ($errors.Count) { throw $errors[0].Message }
-foreach ($name in @('Assert-DreamSkinAutoLaunchPlainFile', 'Read-DreamSkinAutoLaunchOutputTail', 'Invoke-DreamSkinAutoLaunchStarter')) {
+foreach ($name in @('Assert-DreamSkinAutoLaunchPlainFile', 'Read-DreamSkinAutoLaunchOutputTail', 'Invoke-DreamSkinAutoLaunchStartAttempt', 'Invoke-DreamSkinAutoLaunchStarter')) {
   $definition = $ast.Find({param($n)
     $n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq $name
   }, $true)
@@ -23,7 +23,7 @@ try {
     $pidFile = Join-Path $fixture "child-$expected.txt"
     $code = @'
 param([switch]$AutoRestartStock, [string]$AutoRestartReservationToken,
-  [switch]$RequireUnpaused, [int]$OperationLockTimeoutMilliseconds)
+  [switch]$RequireUnpaused, [int]$OperationLockTimeoutMilliseconds, [string]$ResultToken)
 if (-not $AutoRestartStock -or -not $RequireUnpaused -or $OperationLockTimeoutMilliseconds -ne 15000) { exit 99 }
 $info = [Diagnostics.ProcessStartInfo]::new()
 $info.FileName = (Get-Command powershell.exe).Source

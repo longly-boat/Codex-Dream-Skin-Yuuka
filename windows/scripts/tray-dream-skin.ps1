@@ -49,11 +49,23 @@ try {
 
   # The login watcher may win the lock first and be applying the theme.
   # This only bounds contention; an uncontended startup acquires immediately.
+  $initializationClock = [Diagnostics.Stopwatch]::StartNew()
   $initializationLock = Enter-DreamSkinOperationLock -TimeoutMilliseconds 60000
+  $initializationWaitMilliseconds = $initializationClock.ElapsedMilliseconds
+  $initializationStatus = 'failed'
   try {
     $paths = Initialize-DreamSkinThemeStore -SkillRoot $SkillRoot -StateRoot $StateRoot
+    $initializationStatus = 'success'
   } finally {
     Exit-DreamSkinOperationLock -Mutex $initializationLock
+    try {
+      [IO.File]::AppendAllText((Join-Path $StateRoot 'startup-timing.log'),
+        ('{0} pid={1} ms={2} tray-store-finished status={5} lock-wait-ms={3} lock-held-ms={4}' -f
+          [DateTime]::UtcNow.ToString('o'), $PID, $initializationClock.ElapsedMilliseconds,
+          $initializationWaitMilliseconds, ($initializationClock.ElapsedMilliseconds - $initializationWaitMilliseconds),
+          $initializationStatus) +
+        [Environment]::NewLine)
+    } catch {}
   }
 
   $notify = [System.Windows.Forms.NotifyIcon]::new()

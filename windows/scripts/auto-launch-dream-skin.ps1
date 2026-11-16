@@ -385,7 +385,7 @@ function Read-DreamSkinAutoLaunchOutputTail {
   } finally { $stream.Dispose() }
 }
 
-function Invoke-DreamSkinAutoLaunchStarter {
+function Invoke-DreamSkinAutoLaunchStartAttempt {
   param(
     [Parameter(Mandatory = $true)][string]$PowerShellPath,
     [Parameter(Mandatory = $true)][string]$StartScript,
@@ -398,12 +398,16 @@ function Invoke-DreamSkinAutoLaunchStarter {
   Ensure-DreamSkinManagedDirectory -Path $outputRoot -Root $StateRoot
   $stdout = Join-Path $outputRoot 'stdout.log'
   $stderr = Join-Path $outputRoot 'stderr.log'
+  $resultToken = [guid]::NewGuid().ToString('N')
+  $resultPath = Get-DreamSkinStartResultPath -StateRoot $StateRoot -Token $resultToken
+  Assert-DreamSkinAutoLaunchPlainFile -Path $resultPath
+  if (Test-Path -LiteralPath $resultPath) { throw 'Automatic launcher result token already exists.' }
   $launcher = $null
   try {
     $arguments = @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'RemoteSigned',
       '-File', $StartScript, '-AutoRestartStock', '-AutoRestartReservationToken',
       $AutoRestartReservationToken, '-RequireUnpaused', '-OperationLockTimeoutMilliseconds',
-      "$OperationLockTimeoutMilliseconds")
+      "$OperationLockTimeoutMilliseconds", '-ResultToken', $resultToken)
     $argumentLine = ($arguments | ForEach-Object { ConvertTo-DreamSkinProcessArgument -Value $_ }) -join ' '
     $launcher = Start-Process -FilePath $PowerShellPath -ArgumentList $argumentLine `
       -WindowStyle Hidden -PassThru -RedirectStandardOutput $stdout -RedirectStandardError $stderr
@@ -418,13 +422,69 @@ function Invoke-DreamSkinAutoLaunchStarter {
         $output += 'Launcher output could not be read; the process exit code is preserved.'
       }
     }
-    return [pscustomobject]@{ ExitCode = $exitCode; Output = $output }
+    $lockBusy = $false
+    if ($exitCode -ne 0) {
+      try {
+        $result = Read-DreamSkinStartResult -StateRoot $StateRoot -Token $resultToken
+        $lockBusy = $result.outcome -ceq 'failure' -and
+          $result.category -ceq 'operation-lock-busy' -and
+          $result.appearanceRecovery -ceq 'not-needed'
+      } catch {
+        # Missing, malformed or mismatched results never authorize a retry.
+      }
+    }
+    return [pscustomobject]@{ ExitCode = $exitCode; Output = $output; LockBusy = $lockBusy }
   } finally {
     if ($null -ne $launcher) { $launcher.Dispose() }
+    try {
+      Assert-DreamSkinAutoLaunchPlainFile -Path $resultPath
+      Remove-Item -LiteralPath $resultPath -Force -ErrorAction SilentlyContinue
+    } catch {}
     try { Remove-DreamSkinManagedDirectoryVerified -Path $outputRoot -Root $StateRoot } catch {
       # A descendant retaining a handle is not a reason to stop Codex or
       # change a successful result. Keep the small diagnostic directory.
     }
+  }
+}
+
+function Invoke-DreamSkinAutoLaunchStarter {
+  param(
+    [Parameter(Mandatory = $true)][string]$PowerShellPath,
+    [Parameter(Mandatory = $true)][string]$StartScript,
+    [Parameter(Mandatory = $true)][string]$StateRoot,
+    [Parameter(Mandatory = $true)][string]$AutoRestartReservationToken,
+    [ValidateRange(0, 300000)][int]$OperationLockTimeoutMilliseconds
+  )
+  $clock = [Diagnostics.Stopwatch]::StartNew()
+  $output = @()
+  # Keep one durable reservation and its exact original target identities.
+  # Only a nonce-bound pre-lock failure is safe to defer. Once a child owns
+  # the lock, every failure remains terminal for this stock session.
+  for ($attempt = 0; $attempt -lt 4; $attempt++) {
+    $remainingMilliseconds = 90000 - $clock.ElapsedMilliseconds
+    if ($remainingMilliseconds -le 0) {
+      return [pscustomobject]@{
+        ExitCode = 1; Output = @($output) + 'Automatic takeover lock-wait budget expired before retry.'
+        LockDeferrals = $attempt
+      }
+    }
+    try { Assert-DreamSkinAutoRestartControlClear -StateRoot $StateRoot } catch {
+      return [pscustomobject]@{
+        ExitCode = 1; Output = @($output) + 'Automatic takeover stopped before lock retry: controls are no longer clear.'
+        LockDeferrals = $attempt
+      }
+    }
+    $result = Invoke-DreamSkinAutoLaunchStartAttempt -PowerShellPath $PowerShellPath `
+      -StartScript $StartScript -StateRoot $StateRoot `
+      -AutoRestartReservationToken $AutoRestartReservationToken `
+      -OperationLockTimeoutMilliseconds ([int][Math]::Min($OperationLockTimeoutMilliseconds, $remainingMilliseconds))
+    $output += @($result.Output)
+    if (-not $result.LockBusy -or $attempt -eq 3 -or $clock.ElapsedMilliseconds -ge 90000) {
+      return [pscustomobject]@{
+        ExitCode = $result.ExitCode; Output = $output; LockDeferrals = $attempt
+      }
+    }
+    $output += 'Operation lock is busy before takeover; deferring the same reservation without restarting Codex.'
   }
 }
 
@@ -845,8 +905,8 @@ try {
             $lastObservationDetail = 'disabled-or-paused-after-reservation'
           } else {
             # Login also starts the tray, which briefly owns the operation
-            # lock while initializing the theme store. Wait for that owner
-            # instead of consuming the session's sole takeover attempt.
+            # lock while initializing the theme store. Bounded pre-lock
+            # deferrals preserve the same one-shot reservation under load.
             # The launcher revalidates this reservation and process identity
             # after acquiring the lock; no post-launch failure is retried.
             $launcherResult = Invoke-DreamSkinAutoLaunchStarter -PowerShellPath $powershell `
@@ -854,6 +914,11 @@ try {
               -AutoRestartReservationToken $attemptToken -OperationLockTimeoutMilliseconds 15000
             $launcherOutput = $launcherResult.Output
             $launcherExitCode = $launcherResult.ExitCode
+            if ($launcherResult.LockDeferrals -gt 0) {
+              Write-DreamSkinAutoLaunchLog -Path $LogPath -Message (
+                "Pre-lock deferrals: $($launcherResult.LockDeferrals); the original reservation was retained."
+              )
+            }
             foreach ($line in @($launcherOutput | Select-Object -Last 30)) {
               Write-DreamSkinAutoLaunchLog -Path $LogPath -Message ("Launcher: " + "$line")
             }
