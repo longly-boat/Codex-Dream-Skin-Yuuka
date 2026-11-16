@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.9.3 · 2026-11-16
+
+- 版本号与 Windows 自动接管修复保持一致；本次没有 macOS 行为改动，也不发行优香 DMG。
+- Windows 修复、升级范围和致谢见 [v1.9.3 中文](../docs/releases/v1.9.3.md) / [English](../docs/releases/v1.9.3-en.md)。
+
 ## 1.9.2 · 2026-11-13
 
 - 本版本为 Windows 优香主题首发；macOS 源码版本随共享运行时同步，未发布优香 DMG，也未将 macOS 默认主题、安装身份与更新器声明为已完成优香适配。

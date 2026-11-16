@@ -4,7 +4,7 @@
 
 ## Platform support
 
-**Codex Dream Skin Yuuka v1.9.2 ships for Windows x64 only.** macOS and Linux retain upstream sources and checks but have not completed Yuuka product isolation or native UI acceptance testing. No Yuuka DMG or Linux package is released. The inherited-platform columns below are development references, not current support commitments.
+**Codex Dream Skin Yuuka v1.9.3 ships for Windows x64 only.** macOS and Linux retain upstream sources and checks but have not completed Yuuka product isolation or native UI acceptance testing. No Yuuka DMG or Linux package is released. The inherited-platform columns below are development references, not current support commitments.
 
 | Item | Windows | macOS | Linux |
 | --- | --- | --- | --- |

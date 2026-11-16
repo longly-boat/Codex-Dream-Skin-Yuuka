@@ -155,14 +155,18 @@ function Write-DreamSkinStartupTiming([string]$Stage) {
 Write-DreamSkinStartupTiming 'begin'
 
 $operationLock = $null
+$hasAcquiredOperationLock = $false
 $startFailureCategory = 'internal-start-failure'
 $appearanceTransaction = $null
 $appearanceRecovery = 'not-needed'
 $themeSelectionTransaction = $null
 $debugLaunchAttempted = $false
 try {
+  Write-DreamSkinStartupTiming 'operation-lock-wait'
   $operationLock = Enter-DreamSkinOperationLock `
     -TimeoutMilliseconds $OperationLockTimeoutMilliseconds
+  $hasAcquiredOperationLock = $true
+  Write-DreamSkinStartupTiming 'operation-lock-acquired'
   Assert-YuukaLegacyEngineInactive
   if ($AutoRestartStock -and ($RestartExisting -or $PromptRestart)) {
     throw '-AutoRestartStock cannot be combined with -RestartExisting or -PromptRestart.'
@@ -1314,6 +1318,12 @@ try {
     try {
       $reportedCategory = Get-DreamSkinStartFailureCategory `
         -Exception $startError.Exception -FallbackCategory $startFailureCategory
+      # Only a failure before acquiring the outer lock proves the launcher
+      # has not changed configuration, consumed authorization or touched Codex.
+      if ($reportedCategory -ceq 'operation-lock-busy' -and $hasAcquiredOperationLock) {
+        $reportedCategory = 'internal-start-failure'
+      }
+      if ($reportedCategory -ceq 'operation-lock-busy') { Write-DreamSkinStartupTiming 'operation-lock-deferred' }
       Write-DreamSkinStartResult -StateRoot $StateRoot -Token $ResultToken `
         -Outcome 'failure' -Category $reportedCategory -AppearanceRecovery $appearanceRecovery
     } catch {

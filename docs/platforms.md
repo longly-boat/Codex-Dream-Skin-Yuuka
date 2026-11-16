@@ -4,7 +4,7 @@
 
 ## 平台支持
 
-**Codex Dream Skin Yuuka v1.9.2 仅正式发行 Windows x64。** macOS 与 Linux 保留上游源码和检查，尚未完成优香品牌隔离与原生界面验收，不提供优香版 DMG 或 Linux 安装包。下表中继承平台的信息用于开发参考，不是当前支持承诺。
+**Codex Dream Skin Yuuka v1.9.3 仅正式发行 Windows x64。** macOS 与 Linux 保留上游源码和检查，尚未完成优香品牌隔离与原生界面验收，不提供优香版 DMG 或 Linux 安装包。下表中继承平台的信息用于开发参考，不是当前支持承诺。
 
 | 项目 | Windows | macOS | Linux |
 | --- | --- | --- | --- |

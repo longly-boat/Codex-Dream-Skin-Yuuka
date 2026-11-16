@@ -1,4 +1,4 @@
-# Windows 优香版安装与更新 · v1.9.2
+# Windows 优香版安装与更新 · v1.9.3
 
 [中文](install-windows.md) · [English](install-windows.en.md)
 
@@ -7,7 +7,7 @@
 ## 首次安装
 
 1. 从 Microsoft Store 安装官方 `OpenAI.Codex`，成功启动一次后退出。
-2. 从 [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest) 下载 `CodexDreamSkinYuuka-Setup-v1.9.2.exe` 和 `SHA256SUMS.txt`，核对安装包的 SHA-256。
+2. 从 [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest) 下载 `CodexDreamSkinYuuka-Setup-v1.9.3.exe` 和 `SHA256SUMS.txt`，核对安装包的 SHA-256。
 3. 双击安装器并完成向导。
 4. 从开始菜单打开 **Codex Dream Skin Yuuka**，右键托盘图标选择应用主题。Codex 已运行时，按提示保存输入并确认重启。
 

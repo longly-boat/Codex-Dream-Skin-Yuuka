@@ -10,6 +10,7 @@ $script:DreamSkinStartResultCategories = @(
   'injector-start-failed',
   'renderer-verification-failed',
   'superseded',
+  'operation-lock-busy',
   'internal-start-failure'
 )
 $script:DreamSkinStartAppearanceRecoveryStates = @(
@@ -45,7 +46,7 @@ function Get-DreamSkinStartFailureCategory {
     [ValidateSet(
       'cdp-launch-failed', 'cdp-direct-access-denied', 'cdp-endpoint-unavailable',
       'port-unavailable', 'state-reconciliation-failed', 'injector-start-failed',
-      'renderer-verification-failed', 'superseded', 'internal-start-failure'
+      'renderer-verification-failed', 'superseded', 'operation-lock-busy', 'internal-start-failure'
     )]
     [string]$FallbackCategory = 'internal-start-failure'
   )
@@ -191,9 +192,9 @@ function Enter-DreamSkinOperationLock {
   if (-not $acquired) {
     $mutex.Dispose()
     if ($TimeoutMilliseconds -eq 0) {
-      throw 'Another Codex Dream Skin Yuuka install, start, restore, or verify operation is already running.'
+      throw (New-DreamSkinStartException -Category 'operation-lock-busy' -Message 'Another Codex Dream Skin Yuuka install, start, restore, or verify operation is already running.')
     }
-    throw "Another Codex Dream Skin Yuuka operation did not finish within $TimeoutMilliseconds ms."
+    throw (New-DreamSkinStartException -Category 'operation-lock-busy' -Message "Another Codex Dream Skin Yuuka operation did not finish within $TimeoutMilliseconds ms.")
   }
   return $mutex
 }
@@ -2481,6 +2482,33 @@ function Stop-DreamSkinRecordedInjector {
   $processId = [int]$State.injectorPid
   $processHandle = Get-Process -Id $processId -ErrorAction SilentlyContinue
   if (-not $processHandle) { return $true }
+  # A PID can be reused after logout/reboot. A readable, different creation
+  # time proves this is no longer our injector, even when the new owner has
+  # a different executable or an inaccessible command line. Leave it alone
+  # and let the caller archive the stale record. Missing/invalid timestamps
+  # never provide that proof and retain the existing fail-closed path.
+  if ($State.injectorStartedAt) {
+    $expectedStart = [DateTime]::MinValue
+    if (-not [DateTime]::TryParseExact("$($State.injectorStartedAt)", 'o',
+        [Globalization.CultureInfo]::InvariantCulture, [Globalization.DateTimeStyles]::RoundtripKind,
+        [ref]$expectedStart) -or $expectedStart.Kind -ne [DateTimeKind]::Utc) {
+      $processHandle.Dispose()
+      throw 'The recorded injector creation time is invalid. State was preserved.'
+    }
+    try {
+      $actualStart = $processHandle.StartTime.ToUniversalTime()
+    } catch {
+      $exited = $processHandle.HasExited
+      $processHandle.Dispose()
+      if ($exited) { return $true }
+      throw "The recorded injector PID $processId is running, but its start time cannot be inspected. State was preserved."
+    }
+    if ($actualStart.Ticks -ne $expectedStart.Ticks) {
+      $processHandle.Dispose()
+      Write-Warning 'The saved injector PID has been reused; the unrelated process was preserved.'
+      return $false
+    }
+  }
   $process = Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction SilentlyContinue
   if (-not $process) {
     if ($processHandle.HasExited) { return $true }
