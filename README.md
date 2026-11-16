@@ -4,7 +4,7 @@
 
 为 Windows Codex Desktop 制作的优香 / 蔚蓝档案同人主题，基于 [Codex Dream Skin 超天酱版](https://github.com/EmiyaKatuz/Codex-Dream-Skin-Needy-Girl-Overdose)。
 
-**v1.9.3 · 自动接管修复** · [下载与校验文件](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.3) · [版本说明](docs/releases/v1.9.3.md) · [反馈问题](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues)
+**v1.9.4 · 自动接管修复** · [下载与校验文件](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.4) · [版本说明](docs/releases/v1.9.4.md) · [反馈问题](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues)
 
 > 这是一个**纯 vibe coding 产物**：优香版的定制与修复主要通过 AI 辅助实现，仍可能有遗漏。如果遇到 bug，先向你说声抱歉；欢迎在 [Issues](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/issues) 提供复现步骤、Codex 与主题版本，帮助继续改进。
 
@@ -31,11 +31,11 @@
 
 需要 Windows 10 或更高版本、x64，以及已安装并成功启动过的 Microsoft Store 版 Codex。安装器内置 Node.js，日常使用无需另装 Node.js 或 .NET SDK。
 
-1. 从 [v1.9.3 Release](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.3) 获取 `CodexDreamSkinYuuka-Setup-v1.9.3.exe` 和 `SHA256SUMS.txt`，核对摘要后运行安装器。
+1. 从 [v1.9.4 Release](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.4) 获取 `CodexDreamSkinYuuka-Setup-v1.9.4.exe` 和 `SHA256SUMS.txt`，核对摘要后运行安装器。
 2. 打开 **Codex Dream Skin Yuuka**，应用主题并按需开启自动接管。开启后仍可使用原版 Codex 任务栏入口；接管会重启一次 Codex。
 3. 从此前定制版迁移时，先停用旧版自动接管并恢复原生外观，再安装优香版。详见 [使用、迁移与源码构建](YUUKA-README.md)。
 
-v1.9.3 安装器**未做代码签名**，Windows 可能显示未知发布者或 SmartScreen 提示；这与运行时校验不是一回事。请核对本仓库 Release 来源和摘要，不要用上游安装包更新优香版。
+v1.9.4 安装器**未做代码签名**，Windows 可能显示未知发布者或 SmartScreen 提示；这与运行时校验不是一回事。请核对本仓库 Release 来源和摘要，不要用上游安装包更新优香版。
 
 首发通道仅发布 Windows 包。仓库保留 macOS/Linux 上游代码与共享资源，但其默认主题、安装身份和更新器尚未完成优香版适配，不作为本次支持平台。
 

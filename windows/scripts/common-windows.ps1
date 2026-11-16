@@ -2556,15 +2556,28 @@ function Stop-DreamSkinRecordedInjector {
     throw "The recorded injector PID $processId is running, but its visible identity does not match the saved Dream Skin process. State was preserved."
   }
 
-  Stop-Process -Id $processId -Force -ErrorAction Stop
-  # Chromium/Node can retain a terminating process object for slightly longer
-  # than the renderer teardown that triggered this cleanup.  Use a bounded
-  # native wait before treating the exact, already-verified PID as stuck.
-  try { Wait-Process -Id $processId -Timeout 15 -ErrorAction Stop } catch {}
-  if (Get-CimInstance Win32_Process -Filter "ProcessId = $processId" -ErrorAction SilentlyContinue) {
-    throw "The recorded Dream Skin injector did not stop: PID $processId"
+  try {
+    # Pin the native process object before stopping it. Refresh and recheck
+    # creation time after acquiring the handle so a PID replacement between
+    # the earlier identity probe and this point cannot authorize a kill.
+    $null = $processHandle.Handle
+    $processHandle.Refresh()
+    if ($processHandle.HasExited) { return $true }
+    if ($processHandle.StartTime.ToUniversalTime().ToString('o') -cne $startedAt) {
+      throw 'The recorded injector identity changed before shutdown. State was preserved.'
+    }
+    try { $processHandle.Kill() } catch {
+      if (-not $processHandle.HasExited) { throw }
+    }
+    # WMI can still enumerate a terminated process. The verified native
+    # handle is the authority for exit, not a fresh lookup of its numeric PID.
+    if (-not $processHandle.WaitForExit(15000)) {
+      throw "The recorded Dream Skin injector did not stop: PID $processId"
+    }
+    return $true
+  } finally {
+    $processHandle.Dispose()
   }
-  return $true
 }
 
 function Restore-DreamSkinRecordedAcrylicTarget {

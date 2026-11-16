@@ -1798,10 +1798,16 @@ args = [
   if (-not (Get-Command Invoke-DreamSkinCodexWindowActivation -CommandType Function -ErrorAction SilentlyContinue)) {
     throw 'The Windows Codex activation helper is missing from common-windows.ps1.'
   }
-  if (-not $commonSource.Contains('Stop-Process -Id $processId -Force') -or
-    -not $commonSource.Contains('Wait-Process -Id $processId -Timeout 15') -or
-    -not $commonSource.Contains('Get-CimInstance Win32_Process -Filter "ProcessId = $processId"')) {
-    throw 'Recorded injector shutdown must stop, wait for, and recheck only the exact validated PID.'
+  $recordedStopSource = (Get-Command Stop-DreamSkinRecordedInjector -CommandType Function -ErrorAction Stop).Definition
+  if (-not $recordedStopSource.Contains('$processHandle.Handle') -or
+    -not $recordedStopSource.Contains('$processHandle.Refresh()') -or
+    -not $recordedStopSource.Contains(".ToString('o') -cne `$startedAt") -or
+    -not $recordedStopSource.Contains('$processHandle.Kill()') -or
+    -not $recordedStopSource.Contains('$processHandle.WaitForExit(15000)') -or
+    -not $recordedStopSource.Contains('$processHandle.Dispose()') -or
+    $recordedStopSource.Contains('Stop-Process -Id $processId') -or
+    $recordedStopSource.Contains('Wait-Process -Id $processId')) {
+    throw 'Recorded injector shutdown must pin and revalidate its native handle, stop only that process, and confirm exit within a bounded wait.'
   }
   if (-not $startSource.Contains('direct Store executable fallback did not expose a verified loopback CDP endpoint') -or
     -not $startSource.Contains('may disable CDP in this production runtime')) {
@@ -1885,6 +1891,7 @@ args = [
   & (Join-Path $PSScriptRoot 'startup-lock-contention.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-lock-retry.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'injector-pid-reuse.tests.ps1') -Root $Root
+  & (Join-Path $PSScriptRoot 'injector-exit-confirmation.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-child-exit.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'official-profile-discovery.tests.ps1') -Root $Root
   & (Join-Path $PSScriptRoot 'auto-launch-hidden.tests.ps1') -Root $Root
