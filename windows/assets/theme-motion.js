@@ -118,7 +118,9 @@
     return timer;
   };
   const cancelTimer = (timer) => { clearTimeout(timer); timers.delete(timer); };
-  const visible = (node) => node?.isConnected !== false && !node?.hidden
+  const activePage = (node) => node?.isConnected !== false
+    && !node?.closest?.('[data-app-shell-active-page="false"]');
+  const visible = (node) => activePage(node) && !node?.hidden
     && !node?.closest?.('[hidden]')
     // Owned decorations are intentionally aria-hidden; that does not make
     // their visual feedback invisible. Native hidden subtrees still opt out.
@@ -604,8 +606,11 @@
         if (node.isConnected !== false) continue;
         clearNodeFeedback(node); clearBinding(node); tracked.delete(node); intersection?.unobserve(node);
       }
-      const nextAnchor = [...tracked.keys()].find((node) => matches(node, SELECTORS.anchor))
-        || query(document.body, SELECTORS.anchor) || document.body;
+      // A hidden overlay/cached main can precede the real main. Keep a live
+      // eligible anchor (including its IO=false result), otherwise choose a
+      // visible native surface. Do not confuse CSS visibility with viewport IO.
+      const nextAnchor = anchor !== document.body && anchor && visible(anchor) ? anchor
+        : [...document.body.querySelectorAll(SELECTORS.anchor)].find(visible) || document.body;
       if (nextAnchor !== anchor) {
         if (anchor && !tracked.has(anchor)) intersection?.unobserve(anchor);
         // An added surface may have hit the tracking limit before detached
@@ -616,6 +621,21 @@
         intersection?.observe(anchor);
       }
     }
+    // DOM-only route changes need not emit navigation events. Publish page
+    // identity before pausing and without measuring layout during IME input.
+    const page = root.getAttribute("data-dream-page");
+    route = "other";
+    if (!navigating) {
+      if (page === "home" || page === "thread") route = page;
+      else if (page !== "settings") {
+        for (const [node, item] of tracked) {
+          if (!activePage(node) || !item.visible || node.closest?.('[hidden], [aria-hidden="true"]')) continue;
+          if (matches(node, SELECTORS.home)) route = "home";
+          else if (route === "other" && matches(node, SELECTORS.thread)) route = "thread";
+        }
+      }
+    }
+    attr(root, `${PREFIX}route`, route);
     paused = Boolean(document.hidden || composition || navigating || !anchorVisible || scrolling);
     if (paused) {
       attr(root, "data-dream-motion", mode);
@@ -625,12 +645,10 @@
       hideDecorations();
       return;
     }
-    route = "other";
     let busy = false;
     let attention = false;
     for (const [node, item] of tracked) {
-      if (matches(node, SELECTORS.home)) route = "home";
-      else if (route === "other" && matches(node, SELECTORS.thread)) route = "thread";
+      if (!activePage(node)) continue;
       if (isCurrentDialog(node)) attention = true;
       if (node.getAttribute("aria-busy") === "true" && node.closest?.(SELECTORS.local)
         && item.visible && !node.closest?.('[hidden], [aria-hidden="true"]')) busy = true;
@@ -640,7 +658,6 @@
     attr(root, "data-dream-motion", mode);
     attr(root, `${PREFIX}paused`, String(paused));
     attr(root, `${PREFIX}state`, motionState);
-    attr(root, `${PREFIX}route`, route);
     for (const effect of EFFECTS) {
       const name = effect === "themeTransition" ? "theme-transition" : effect;
       const enabled = mode !== "off" && config.settings.effects[effect]
@@ -745,11 +762,20 @@
     if (root.getAttribute("data-dream-skin") !== "active") { cleanup(); return; }
     if (composition) {
       compositionDirty ||= records.some((mutation) => !mutation.target?.closest?.(`[${OWNED}]`));
+      // The renderer's page identity is metadata, not a geometry change. Keep
+      // it current during IME without starting scans or animation playback.
+      if (records.some((mutation) => mutation.target === root
+        && mutation.attributeName === "data-dream-page")) refresh();
       return;
     }
     for (const mutation of records) {
       if (mutation.target === root) { changed = true; continue; }
       if (mutation.target?.closest?.(`[${OWNED}]`)) continue;
+      if (mutation.type === "attributes"
+        && ["data-app-shell-active-page", "hidden", "aria-hidden"].includes(mutation.attributeName)) {
+        // Native route wrappers are not themselves tracked task controls.
+        scan(mutation.target); changed = true;
+      }
       if (mutation.type === "attributes" && ["class", "style"].includes(mutation.attributeName)) {
         if (backgroundCharacterNode) {
           if (hasYuukaArtwork()) geometryChanged ||= mutation.target === document.body;
@@ -1136,9 +1162,9 @@
   globalThis[KEY] = state;
   scan(document.body, true);
   refresh();
-  observer?.observe(root, { attributes: true, attributeFilter: ["data-dream-skin", "data-dream-theme"] });
+  observer?.observe(root, { attributes: true, attributeFilter: ["data-dream-skin", "data-dream-theme", "data-dream-page"] });
   observer?.observe(document.body, { subtree: true, childList: true, attributes: true,
-    attributeFilter: ["class", "style", "data-ds-part", "data-angel-component", "aria-busy", "aria-expanded", "aria-modal", "data-state", "hidden", "aria-hidden", "href", "data-dream-motion-agent-id", "data-content-search-unit-key", "data-dream-preset-id", "data-local-conversation-item-target-ids", "data-app-action-sidebar-project-id", "data-app-action-sidebar-thread-id", "data-app-action-sidebar-thread-host-id", "data-app-action-sidebar-thread-kind"] });
+    attributeFilter: ["class", "style", "data-ds-part", "data-app-shell-active-page", "data-angel-component", "aria-busy", "aria-expanded", "aria-modal", "data-state", "hidden", "aria-hidden", "href", "data-dream-motion-agent-id", "data-content-search-unit-key", "data-dream-preset-id", "data-local-conversation-item-target-ids", "data-app-action-sidebar-project-id", "data-app-action-sidebar-thread-id", "data-app-action-sidebar-thread-host-id", "data-app-action-sidebar-thread-kind"] });
   listen(media, "change", refresh);
   listen(transparencyMedia, "change", refresh);
   listen(forcedColorsMedia, "change", refresh);

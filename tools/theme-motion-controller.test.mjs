@@ -273,6 +273,91 @@ test("a replaced main anchor resumes motion after the detached anchor pauses it"
   page.state.cleanup();
 });
 
+test("home-to-thread classification updates while the main anchor remains offscreen", () => {
+  const page = fixture({ home: true }); page.install(configuration("full"));
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "home");
+  page.intersect(page.main, false);
+  page.attribute(page.surface, "data-ds-part", "thread"); page.flush();
+  assert.equal(page.state.inspect().route, "thread",
+    "a paused animation must not retain the previous Home wallpaper route");
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "thread");
+  assert.equal(page.state.inspect().paused, true,
+    "reclassifying the page must not resume an offscreen animation");
+  page.intersect(page.main, true);
+  assert.equal(page.state.inspect().paused, false);
+  assert.equal(page.state.inspect().route, "thread");
+  page.state.cleanup();
+});
+
+test("inactive cached home anchors cannot override the active thread and wrapper-only switches refresh routes", () => {
+  const page = fixture();
+  const cachedPage = page.node("section", { "data-app-shell-active-page": "false" });
+  const cachedMain = cachedPage.appendChild(page.node("main", { "data-ds-part": "main" }));
+  cachedMain.appendChild(page.node("div", { "data-testid": "home-icon" }));
+  const threadPage = page.node("section", { "data-app-shell-active-page": "true" });
+  threadPage.appendChild(page.main);
+  page.body.appendChild(cachedPage);
+  page.body.appendChild(threadPage);
+  page.install(configuration("full"));
+  assert.equal(page.state.inspect().route, "thread",
+    "the retained Home icon precedes the thread but belongs to an inactive page");
+  assert.equal(page.state.inspect().paused, false);
+  page.attribute(threadPage, "data-app-shell-active-page", "false");
+  page.attribute(cachedPage, "data-app-shell-active-page", "true"); page.flush();
+  assert.equal(page.state.inspect().route, "home",
+    "activating a retained route must work without adding or removing its nodes");
+  page.attribute(cachedPage, "data-app-shell-active-page", "false");
+  page.attribute(threadPage, "data-app-shell-active-page", "true"); page.flush();
+  assert.equal(page.state.inspect().route, "thread");
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "thread");
+  page.state.cleanup();
+});
+
+test("a hidden overlay main preceding the active main cannot permanently pause its animations", () => {
+  const page = fixture({ home: true });
+  const overlay = page.node("section", { "aria-hidden": "true" });
+  const hiddenMain = overlay.appendChild(page.node("main"));
+  hiddenMain.computed.visibility = "hidden";
+  page.main.remove();
+  page.body.appendChild(overlay);
+  page.body.appendChild(page.main);
+  page.install(configuration("full"));
+  assert.equal(page.state.inspect().route, "home");
+  assert.equal(page.state.inspect().paused, false,
+    "the visible main owns pause state even when a hidden overlay main occurs first");
+  page.intersect(hiddenMain, false);
+  assert.equal(page.state.inspect().paused, false);
+  page.intersect(page.main, false);
+  assert.equal(page.state.inspect().paused, true,
+    "the actual main going offscreen must still pause animations");
+  page.intersect(hiddenMain, true);
+  assert.equal(page.state.inspect().paused, true,
+    "an unrelated overlay observer must not resume the active main");
+  page.intersect(page.main, true);
+  assert.equal(page.state.inspect().paused, false);
+  page.state.cleanup();
+});
+
+test("canonical page changes update paused routes during IME without reading layout", () => {
+  const page = fixture({ home: true });
+  page.root.setAttribute("data-dream-page", "home");
+  page.install(configuration("full"));
+  page.global.dispatch("compositionstart");
+  const reads = page.reads;
+  page.attribute(page.root, "data-dream-page", "thread"); page.flush();
+  assert.equal(page.root.getAttribute("data-dream-motion-route"), "thread",
+    "canonical page state must revoke Home paint even while IME pauses motion");
+  assert.equal(page.state.inspect().paused, true);
+  assert.deepEqual(page.reads, reads, "page metadata must not trigger layout reads during composition");
+  page.attribute(page.root, "data-dream-page", "settings"); page.flush();
+  assert.equal(page.state.inspect().route, "other");
+  assert.deepEqual(page.reads, reads);
+  page.global.dispatch("compositionend");
+  assert.equal(page.state.inspect().route, "other",
+    "canonical Settings must win over any retained native Home anchor");
+  page.state.cleanup();
+});
+
 test("anchor removal can fall back to the body and bind a later main without retaining the old observer", () => {
   const page = fixture({ home: true }); page.install(configuration("full"));
   page.intersect(page.main, false);

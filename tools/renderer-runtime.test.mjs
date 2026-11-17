@@ -915,6 +915,8 @@ export async function runRendererRuntimeTest(assetRoot) {
   const cachedParts = cached.partFixtures;
   assert.equal(cachedState.scope.baseState, "thread",
     "Cached Home and Settings preceding the active thread must not choose its scope.");
+  assert.equal(cached.root.getAttribute("data-dream-page"), "thread",
+    "Page paint must not depend on a stale or paused motion controller.");
   assert.equal(cachedState.scope.level, "L1");
   for (const key of ["main", "header", "home", "homeHero", "composer", "composerToolbar"]) {
     assert.equal(cachedParts[key].getAttribute("data-ds-part"), null,
@@ -942,6 +944,7 @@ export async function runRendererRuntimeTest(assetRoot) {
   switchCachedPage(true);
   assert.equal(cachedState.scope.baseState, "home",
     "Activating cached Home must refresh scope even though its icon is intentionally hidden.");
+  assert.equal(cached.root.getAttribute("data-dream-page"), "home");
   assert.equal(cachedState.scope.level, "L1");
   assert.equal(cachedParts.home.getAttribute("data-ds-part"), "home");
   assert.equal(cachedParts.composer.getAttribute("data-ds-part"), "composer");
@@ -950,6 +953,7 @@ export async function runRendererRuntimeTest(assetRoot) {
   assert.equal(cachedParts.thread.getAttribute("data-ds-part"), null);
   switchCachedPage(false);
   assert.equal(cachedState.scope.baseState, "thread");
+  assert.equal(cached.root.getAttribute("data-dream-page"), "thread");
   assert.equal(cachedParts.home.getAttribute("data-ds-part"), null);
   assert.equal(cachedParts.composer.getAttribute("data-ds-part"), null);
   assert.equal(cachedParts.activeComposer.getAttribute("data-ds-part"), "composer");
@@ -960,6 +964,7 @@ export async function runRendererRuntimeTest(assetRoot) {
   // Cleanup must still remove it from an inactive page through the full DOM.
   cachedParts.homeIcon.setAttribute("data-ds-part", "home-hero");
   assert.equal(cachedState.cleanup(), true);
+  assert.equal(cached.root.getAttribute("data-dream-page"), null);
   assert.ok([...cached.domNodes].every((node) => node.getAttribute("data-ds-part") === null),
     "Cleanup must remove active parts and stale markers inside inactive pages.");
 

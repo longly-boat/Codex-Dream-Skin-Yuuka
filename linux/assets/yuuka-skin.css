@@ -29,7 +29,7 @@ html[data-dream-skin="active"] body {
   background-color: var(--ds-bg) !important;
   background-image: none !important;
 }
-html[data-dream-skin="active"][data-dream-motion-route="home"] body {
+html[data-dream-skin="active"][data-dream-page="home"] body {
   background-image: var(--dream-skin-art) !important;
   background-position: var(--dream-art-focus-x, 78%) var(--dream-art-focus-y, 42%) !important;
   background-size: cover !important;
@@ -38,7 +38,7 @@ html[data-dream-skin="active"][data-dream-motion-route="home"] body {
 }
 /* Hide only decorative paint during route changes; native/task status
    feedback remains available. Also guard an in-flight theme handoff. */
-html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-dream-motion-owned]:is(
+html[data-dream-skin="active"]:not([data-dream-page="home"]) [data-dream-motion-owned]:is(
   [data-dream-motion-role="background-character"],
   [data-dream-motion-role="background-scene"],
   [data-dream-motion-role="character"],
@@ -58,12 +58,12 @@ html[data-dream-skin="active"] [data-ds-part="main"] {
   border-color: var(--ds-line) !important;
   box-shadow: none !important;
 }
-html[data-dream-skin="active"][data-dream-motion-route="home"] [data-ds-part="main"] {
+html[data-dream-skin="active"][data-dream-page="home"] [data-ds-part="main"] {
   background: linear-gradient(90deg, rgb(var(--ds-panel-rgb) / .20), rgb(var(--ds-panel-rgb) / .08) 54%, rgb(var(--ds-panel-rgb) / .02)) !important;
 }
 /* The home composer has no active task status. Do not display the motion
    controller's unanchored unknown-state dot above its suggestions. */
-html[data-dream-skin="active"][data-dream-motion-route="home"] [data-dream-motion-role="status"] {
+html[data-dream-skin="active"][data-dream-page="home"] [data-dream-motion-role="status"] {
   display: none !important;
 }
 html[data-dream-skin="active"] [data-ds-part="home"],
@@ -104,17 +104,17 @@ html[data-dream-skin="active"] :is([data-app-shell-titlebar="true"], [class~="gr
   background-color: rgb(var(--ds-panel-rgb) / .9) !important;
   text-shadow: none !important;
 }
-html[data-dream-skin="active"][data-dream-motion-route="home"] :is(
+html[data-dream-skin="active"][data-dream-page="home"] :is(
   [data-ds-part="header"], [data-app-shell-titlebar="true"], [class~="group/application-menu-top-bar"]
 ) {
   background: transparent !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
-html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-ds-part="sidebar"] {
+html[data-dream-skin="active"]:not([data-dream-page="home"]) [data-ds-part="sidebar"] {
   background-color: rgb(var(--ds-panel-2-rgb)) !important;
 }
-html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) :is(
+html[data-dream-skin="active"]:not([data-dream-page="home"]) :is(
   [data-ds-part="header"], [data-app-shell-titlebar="true"], [class~="group/application-menu-top-bar"]
 ) {
   background-color: rgb(var(--ds-panel-rgb)) !important;
@@ -371,8 +371,8 @@ html[data-dream-skin="active"] [data-ds-part="composer"] {
   background-position: right 14px top 7px;
   background-repeat: no-repeat;
 }
-html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-testid="home-icon"]::after,
-html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) [data-yuuka-halo],
+html[data-dream-skin="active"]:not([data-dream-page="home"]) [data-testid="home-icon"]::after,
+html[data-dream-skin="active"]:not([data-dream-page="home"]) [data-yuuka-halo],
 html[data-dream-skin="active"]:is([data-dream-motion="off"], [data-dream-motion-paused="true"]) [data-testid="home-icon"]::after,
 html[data-dream-skin="active"]:is([data-dream-motion="off"], [data-dream-motion-paused="true"]) [data-yuuka-halo] { animation: none; }
 /* Replace only the existing glyph's paint; the native button handles events. */
@@ -766,7 +766,7 @@ html[data-dream-skin="active"] #codex-yuuka-workdesk {
   font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
   text-align: left;
 }
-html[data-dream-skin="active"]:not([data-dream-motion-route="home"]) #codex-yuuka-workdesk,
+html[data-dream-skin="active"]:not([data-dream-page="home"]) #codex-yuuka-workdesk,
 html[data-dream-skin="active"] #codex-yuuka-workdesk[hidden] { display: none !important; }
 html[data-dream-skin="active"] #codex-yuuka-workdesk *,
 html[data-dream-skin="active"] #codex-yuuka-workdesk *::before,
