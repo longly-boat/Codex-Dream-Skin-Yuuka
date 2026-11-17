@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.5 · 2026-11-17
+
+- 同步共享 renderer 的活动页面标记、缓存页面识别，以及 motion 在暂停期间的路由更新和可见主区域选择修复。
+- 同步优香页面背景样式及三平台版本号；本次仅发行 Windows 优香安装包，没有 macOS DMG 或 Linux 包。
+- 详见 [v1.9.5 中文](../docs/releases/v1.9.5.md) / [English](../docs/releases/v1.9.5-en.md)。
+
 ## 1.9.4 · 2026-11-16
 
 - 与 Windows 接管及退出确认修复同步版本号；macOS/Linux 行为未改，不发行优香 DMG 或 Linux 包。

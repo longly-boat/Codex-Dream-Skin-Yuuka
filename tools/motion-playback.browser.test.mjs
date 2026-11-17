@@ -28,7 +28,7 @@ const fixture = `<!doctype html><html><head><title>Dream Skin motion playback fi
   <textarea aria-label="Prompt">Native prompt fixture</textarea><svg id="native-spinner" viewBox="0 0 16 16"><path d="M8 1L8 5"/></svg>
   </section></main></body></html>`;
 
-async function launch(t, material = 'system', platform = 'windows') {
+async function launch(t, material = 'system', platform = 'windows', yuuka = false) {
   const {chromium} = createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE_PATH || 'playwright');
   // Windows runners may expose TEMP with an 8.3 alias. The production reader
   // deliberately rejects redirected/noncanonical ancestors, so hand it the
@@ -38,10 +38,10 @@ async function launch(t, material = 'system', platform = 'windows') {
   // This regression suite covers the inherited Internet Angel/P-chan poses
   // and exact JPEG eyelids. Select that pack explicitly: Windows now defaults
   // to Yuuka, whose separate artwork/controller tests cover its own animation.
-  const themeDirectory = path.join(directory, 'internet-angel-theme');
+  const themeDirectory = path.join(directory, yuuka ? 'yuuka-theme' : 'internet-angel-theme');
   await mkdir(themeDirectory);
-  for (const name of ['theme.json', 'dream-reference.jpg']) {
-    await copyFile(new URL(`../macos/assets/${name}`, import.meta.url), path.join(themeDirectory, name));
+  for (const name of yuuka ? ['theme.json', 'background.png'] : ['theme.json', 'dream-reference.jpg']) {
+    await copyFile(new URL(`../${yuuka ? 'windows' : 'macos'}/assets/${name}`, import.meta.url), path.join(themeDirectory, name));
   }
   const browser = await chromium.launch({headless:true,
     ...(process.env.DREAM_SKIN_BROWSER_EXECUTABLE ? {executablePath:process.env.DREAM_SKIN_BROWSER_EXECUTABLE} : {})});
@@ -77,6 +77,50 @@ async function launch(t, material = 'system', platform = 'windows') {
   await page.waitForFunction(() => document.documentElement.getAttribute('data-dream-motion-paused') === 'false');
   return {page, install};
 }
+
+test('Yuuka paints a solid conversation while motion is paused or off and cached home remains mounted', options, async (t) => {
+  const {page, install} = await launch(t, 'system', 'windows', true);
+  const homePaint = () => page.waitForFunction(() =>
+    document.documentElement.getAttribute('data-dream-page') === 'home'
+    && getComputedStyle(document.body).backgroundImage !== 'none');
+  const threadPaint = () => page.waitForFunction(() => {
+    const root = document.documentElement;
+    const main = document.querySelector('[data-ds-part="main"]');
+    return root.getAttribute('data-dream-page') === 'thread'
+      && getComputedStyle(document.body).backgroundImage === 'none'
+      && main && getComputedStyle(main).backgroundImage === 'none'
+      && getComputedStyle(main).backgroundColor === 'rgb(238, 246, 252)'
+      && [...document.querySelectorAll('[data-dream-motion-role="background-character"], [data-dream-motion-role="background-scene"]')]
+        .every((node) => getComputedStyle(node).display === 'none' || getComputedStyle(node).visibility === 'hidden');
+  });
+  await homePaint();
+  await page.evaluate(() => {
+    const cached = document.createElement('section');
+    cached.id = 'cached-home';
+    document.querySelector('main').appendChild(cached);
+    cached.appendChild(document.querySelector('[data-testid="home-icon"]'));
+    window.dispatchEvent(new Event('compositionstart'));
+    cached.setAttribute('data-app-shell-active-page', 'false');
+    cached.style.display = 'none';
+  });
+  await threadPaint();
+  assert.equal(await page.evaluate(() => document.documentElement.getAttribute('data-dream-motion-paused')), 'true');
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event('compositionend'));
+    const cached = document.querySelector('#cached-home');
+    cached.setAttribute('data-app-shell-active-page', 'true');
+    cached.style.display = '';
+  });
+  await homePaint();
+  await install(settings('off'));
+  await homePaint();
+  await page.evaluate(() => {
+    const cached = document.querySelector('#cached-home');
+    cached.setAttribute('data-app-shell-active-page', 'false');
+    cached.style.display = 'none';
+  });
+  await threadPaint();
+});
 
 async function feedbackTargets(page) {
   return page.evaluate(async () => {

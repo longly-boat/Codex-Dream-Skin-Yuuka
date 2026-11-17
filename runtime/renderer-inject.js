@@ -20,7 +20,7 @@
     variable: `--ds-community-composer-${property}`,
   })).filter(({ variable }) => cssText.includes(`${variable}:`));
   const ROOT_ATTRS = [
-    "data-dream-skin", SHELL_ATTR, "data-dream-theme", "data-dream-upload-alpha", "data-dream-user-transparency",
+    "data-dream-skin", SHELL_ATTR, "data-dream-theme", "data-dream-page", "data-dream-upload-alpha", "data-dream-user-transparency",
     "data-dream-art-wide", "data-dream-art-safe", "data-dream-task-mode",
     "data-dream-art-safe-area", "data-dream-art-task-mode", "data-dream-art-aspect",
     "data-dream-art-ready",
@@ -1115,6 +1115,9 @@
   const refreshScope = () => {
     metrics.routePasses += 1;
     const scope = detectScope();
+    // Page paint must follow the active native route even while motion is
+    // paused, offscreen, disabled or composing. Overlays keep their base page.
+    setAttribute(document.documentElement, "data-dream-page", scope.baseState);
     const state = window[STATE_KEY];
     if (state?.installToken === installToken) state.scope = scope;
     return scope;
