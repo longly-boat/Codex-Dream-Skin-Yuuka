@@ -225,7 +225,7 @@ html:root[data-dream-motion]:not([data-dream-motion="off"])[data-dream-motion-pa
 html:root[data-dream-motion]:not([data-dream-motion="off"])[data-dream-motion-paused="false"][data-dream-motion-interactions="on"] :is(
   [data-angel-component="sidebar-row"], [data-angel-component="terminal-tab"],
   [data-angel-component="settings-segment"], .dream-terminal-tab,
-  [data-ds-part="sidebar"] [aria-current], .dream-settings-segment
+  [data-ds-part="sidebar"] [aria-current]:not(:where([data-app-action-sidebar-thread-row][aria-current="page"] [data-interactive-row-button])), .dream-settings-segment
 ):is([aria-selected="true"], [aria-current="page"], [data-state="active"], [data-state="checked"]) {
   border-color: var(--dream-motion-accent) !important;
   outline: 1px solid color-mix(in srgb, var(--dream-motion-accent) 42%, transparent);

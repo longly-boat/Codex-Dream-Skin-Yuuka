@@ -122,6 +122,130 @@ test('Yuuka paints a solid conversation while motion is paused or off and cached
   await threadPaint();
 });
 
+test('Yuuka preserves the native shell backing geometry while revealing Home after Codex 26.1117', options, async (t) => {
+  const {page, install} = await launch(t, 'system', 'windows', true);
+  await page.evaluate(() => {
+    const frame = document.createElement('div');
+    frame.setAttribute('data-app-shell-frame', 'true');
+    frame.innerHTML = `<div data-app-shell-workspace="true" style="position:fixed;inset:0">
+      <div id="native-backing" data-app-shell-surface-backing="true" class="bg-surface"
+        style="position:absolute;inset:0 0 0 240px;pointer-events:none;border-radius:12px 0 0 12px;background:rgb(247 251 255 / .97)"></div>
+      <aside id="native-panel" class="bg-surface" style="background:rgb(247 251 255 / .97)">
+        <div id="panel-backing" data-app-shell-surface-backing="true" style="background:rgb(247 251 255 / .97)"></div>
+      </aside></div>`;
+    document.body.appendChild(frame);
+    frame.firstElementChild.appendChild(document.querySelector('main'));
+  });
+  const paint = () => page.evaluate(() => {
+    const backing = document.querySelector('#native-backing');
+    const style = getComputedStyle(backing), rect = backing.getBoundingClientRect();
+    return {page:document.documentElement.getAttribute('data-dream-page'),
+      color:style.backgroundColor, image:style.backgroundImage,
+      geometry:[rect.x, rect.y, rect.width, rect.height, style.borderRadius, style.pointerEvents, style.opacity],
+      bodyImage:getComputedStyle(document.body).backgroundImage !== 'none',
+      panel:getComputedStyle(document.querySelector('#native-panel')).backgroundColor,
+      nested:getComputedStyle(document.querySelector('#panel-backing')).backgroundColor};
+  });
+  const home = await paint();
+  assert.equal(home.page, 'home');
+  assert.equal(home.color, 'rgba(0, 0, 0, 0)', 'native backing must not wash out the Home wallpaper');
+  assert.equal(home.image, 'none');
+  assert.equal(home.bodyImage, true);
+  assert.deepEqual(home.geometry, [240, 0, 1040, 800, '12px 0px 0px 12px', 'none', '1']);
+  assert.equal(home.panel, 'rgba(247, 251, 255, 0.97)');
+  assert.equal(home.nested, home.panel, 'nested panels must keep their own surfaces');
+  await page.locator('textarea').fill('Native composer remains editable');
+  assert.equal(await page.locator('textarea').inputValue(), 'Native composer remains editable');
+  await install(settings('off'));
+  assert.equal((await paint()).color, home.color, 'motion off must retain Home transparency');
+  await page.evaluate(() => document.querySelector('[data-testid="home-icon"]').remove());
+  await page.waitForFunction(() => document.documentElement.getAttribute('data-dream-page') === 'thread');
+  const thread = await paint();
+  assert.equal(thread.color, 'rgb(238, 246, 252)');
+  assert.equal(thread.bodyImage, false);
+  assert.deepEqual(thread.geometry, home.geometry);
+  await page.evaluate(() => document.documentElement.style.setProperty('--ds-bg', '#101b2b'));
+  assert.equal((await paint()).color, 'rgb(16, 27, 43)', 'backing must use the selected palette');
+  await page.evaluate(() => {
+    const preview = document.createElement('section');
+    preview.setAttribute('data-testid', 'theme-preview');
+    document.querySelector('main').appendChild(preview);
+  });
+  await page.waitForFunction(() => document.documentElement.getAttribute('data-dream-page') === 'settings');
+  assert.equal((await paint()).color, 'rgb(16, 27, 43)');
+  await page.evaluate(() => {
+    document.querySelector('[data-testid="theme-preview"]').remove();
+    const icon = document.createElement('section');
+    icon.setAttribute('data-testid', 'home-icon');
+    document.querySelector('main').appendChild(icon);
+  });
+  await page.waitForFunction(() => document.documentElement.getAttribute('data-dream-page') === 'home');
+  assert.equal((await paint()).color, home.color);
+  assert.equal((await paint()).bodyImage, true);
+  await page.evaluate(() => window.__CODEX_DREAM_SKIN_STATE__.cleanup());
+  assert.equal((await paint()).color, home.panel, 'removing the theme restores native paint');
+});
+
+test('Yuuka paints one selected sidebar row and preserves nested title focus and actions', options, async (t) => {
+  const {page, install} = await launch(t, 'system', 'windows', true);
+  await page.evaluate(() => {
+    const sidebar = document.createElement('aside');
+    sidebar.className = 'app-shell-left-panel';
+    sidebar.innerHTML = `<style>
+      #selection-fixture button {background:transparent;border:0;padding:0;}
+      #selection-row {position:relative;isolation:isolate;display:flex;width:240px;height:30px;align-items:center;gap:8px;}
+      #selection-title {display:flex;min-width:0;flex:1;text-align:left;}
+      #selection-title::before {content:'';position:absolute;inset:0;z-index:-1;}
+      #selection-title:focus-visible {outline:none;}
+      #selection-title:focus-visible::before {outline:2px solid rgb(200,80,20);outline-offset:-2px;}
+      #selection-title span {overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+      #selection-action {flex:0 0 24px;}
+    </style><div id="selection-fixture">
+      <div id="selection-row" data-app-action-sidebar-thread-row aria-current="page">
+        <button id="selection-title" data-interactive-row-button="true" aria-current="page"><span>A long native conversation title that must truncate</span></button>
+        <button id="selection-action" aria-label="Fixture action">+</button>
+      </div>
+      <button id="selection-standalone" aria-current="page">Standalone navigation</button>
+    </div>`;
+    document.body.appendChild(sidebar);
+    window.fixtureClicks = {title:0,action:0};
+    for (const name of ['title','action']) sidebar.querySelector('#selection-'+name).addEventListener('click',()=>window.fixtureClicks[name]++);
+  });
+  await page.waitForFunction(() => document.querySelector('aside')?.getAttribute('data-ds-part') === 'sidebar');
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#selection-standalone')).backgroundColor === 'rgba(23, 107, 175, 0.12)');
+  const paint = () => page.evaluate(() => Object.fromEntries(['row','title','action','standalone'].map(name=>{
+    const el=document.querySelector('#selection-'+name),c=getComputedStyle(el),r=el.getBoundingClientRect();
+    return [name,{background:c.backgroundColor,shadow:c.boxShadow,outline:c.outlineWidth,outlineStyle:c.outlineStyle,focused:el.matches(':focus-visible'),
+      rect:[r.x,r.y,r.width,r.height],focusOutline:getComputedStyle(el,'::before').outlineWidth,focusStyle:getComputedStyle(el,'::before').outlineStyle}];
+  })));
+  const initial=await paint();
+  assert.equal(initial.row.background,'rgba(23, 107, 175, 0.12)');
+  assert.notEqual(initial.row.shadow,'none');
+  assert.equal(initial.row.outline,'1px');
+  assert.equal(initial.standalone.background,initial.row.background,'standalone selection must remain styled');
+  assert.equal(initial.title.background,'rgba(0, 0, 0, 0)','nested title must not duplicate the selected row fill');
+  assert.equal(initial.title.shadow,'none');
+  assert.equal(initial.title.outlineStyle,'none','motion must outline the row only');
+  assert.ok(initial.title.rect[0]+initial.title.rect[2] <= initial.action.rect[0]-8,'native action spacing must remain');
+  await page.locator('#selection-title').hover();
+  assert.equal((await paint()).title.background,initial.title.background,'hover must not recreate a title pill');
+  await page.locator('#selection-title').click();
+  await page.locator('#selection-action').click();
+  assert.deepEqual(await page.evaluate(()=>window.fixtureClicks),{title:1,action:1});
+  await page.keyboard.press('Tab');
+  await page.locator('#selection-title').focus();
+  assert.equal((await paint()).title.focusOutline,'2px','native keyboard focus must remain visible');
+  assert.equal((await paint()).title.focusStyle,'solid');
+  await install(settings('off'));
+  const off=await paint();
+  assert.equal(off.title.background,initial.title.background);
+  assert.equal(off.title.shadow,'none');
+  assert.deepEqual(off.row.rect,initial.row.rect,'theme and motion must not change row geometry');
+  await page.evaluate(()=>document.querySelector('#selection-row').removeAttribute('aria-current'));
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#selection-title')).backgroundColor === 'rgba(23, 107, 175, 0.12)');
+  assert.equal((await paint()).title.background,initial.row.background,'an independently current title without a selected row keeps the legacy highlight');
+});
+
 async function feedbackTargets(page) {
   return page.evaluate(async () => {
     document.querySelector('#feedback-fixture')?.remove();

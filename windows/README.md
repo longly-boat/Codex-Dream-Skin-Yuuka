@@ -1,4 +1,4 @@
-# Codex Dream Skin Yuuka for Windows · v1.9.5
+# Codex Dream Skin Yuuka for Windows · v1.9.6
 
 [中文](README.md) · [English](README.en.md)
 
@@ -13,7 +13,7 @@
 
 ## Release 安装
 
-从 [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest) 下载 `CodexDreamSkinYuuka-Setup-v1.9.5.exe` 和 `SHA256SUMS.txt`，核对摘要后运行安装器。安装按当前用户进行。首次安装、SmartScreen 提示、更新与卸载见 [Windows 安装指南](../docs/install-windows.md)。
+从 [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest) 下载 `CodexDreamSkinYuuka-Setup-v1.9.6.exe` 和 `SHA256SUMS.txt`，核对摘要后运行安装器。安装按当前用户进行。首次安装、SmartScreen 提示、更新与卸载见 [Windows 安装指南](../docs/install-windows.md)。
 
 打开 **Codex Dream Skin Yuuka** 进入原生主题管理器；右键托盘图标可应用主题、切换已保存主题或恢复外观。双击托盘图标也可打开管理器。
 
