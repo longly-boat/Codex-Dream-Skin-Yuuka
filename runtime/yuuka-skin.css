@@ -96,8 +96,10 @@ html[data-dream-skin="active"] [data-ds-part="sidebar"] :is(button, a) {
   color: var(--ds-text);
   border-radius: 7px;
 }
-html[data-dream-skin="active"] [data-ds-part="sidebar"] :is(button, a):hover { background-color: rgb(var(--ds-accent-rgb) / .09) !important; }
-html[data-dream-skin="active"] [data-ds-part="sidebar"] [aria-current="page"] {
+/* Current Codex repeats aria-current on a row's title button. The row owns
+   selection paint; its interactive title retains native focus and hit areas. */
+html[data-dream-skin="active"] [data-ds-part="sidebar"] :is(button, a):not(:where([data-app-action-sidebar-thread-row] [data-interactive-row-button])):hover { background-color: rgb(var(--ds-accent-rgb) / .09) !important; }
+html[data-dream-skin="active"] [data-ds-part="sidebar"] [aria-current="page"]:not(:where([data-app-action-sidebar-thread-row][aria-current="page"] [data-interactive-row-button])) {
   background-color: rgb(var(--ds-accent-rgb) / .12) !important;
   box-shadow: inset 3px 0 var(--ds-cyan);
 }
@@ -407,7 +409,7 @@ html[data-dream-skin="active"] [data-ds-part="composer"] {
 }
 
 /* Selection uses its left rail only; never paint a marker over title text. */
-html[data-dream-skin="active"] [data-ds-part="sidebar"] [aria-current="page"] { background-image: none !important; }
+html[data-dream-skin="active"] [data-ds-part="sidebar"] [aria-current="page"]:not(:where([data-app-action-sidebar-thread-row][aria-current="page"] [data-interactive-row-button])) { background-image: none !important; }
 html[data-dream-skin="active"] [data-yuuka-project-icon] {
   width: 16px;
   height: 16px;
