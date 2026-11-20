@@ -1,8 +1,8 @@
 # 优香主题：使用与迁移
 
-**v1.9.5 会话纯色背景修复** · [下载与校验文件](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.5) · [中文版本说明](docs/releases/v1.9.5.md) · [English release notes](docs/releases/v1.9.5-en.md)
+**v1.9.6 新版 Codex 首页与侧栏兼容修复** · [下载与校验文件](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/tag/v1.9.6) · [中文版本说明](docs/releases/v1.9.6.md) · [English release notes](docs/releases/v1.9.6-en.md)
 
-安装器为 Windows x64 提供，内置 Node.js 和自包含主题管理器。下载同一 Release 的 Setup 与 `SHA256SUMS.txt`，核对摘要后运行。v1.9.5 安装器未做代码签名，Windows 可能显示未知发布者或 SmartScreen 提示。
+安装器为 Windows x64 提供，内置 Node.js 和自包含主题管理器。下载同一 Release 的 Setup 与 `SHA256SUMS.txt`，核对摘要后运行。v1.9.6 安装器未做代码签名，Windows 可能显示未知发布者或 SmartScreen 提示。
 
 ## Windows 身份
 
@@ -12,7 +12,7 @@
 | 安装目录 | `%LOCALAPPDATA%\Programs\CodexDreamSkinYuuka` |
 | 运行数据 | `%LOCALAPPDATA%\CodexDreamSkinYuuka` |
 | 更新仓库 | `longly-boat/Codex-Dream-Skin-Yuuka` |
-| 当前安装包 | `CodexDreamSkinYuuka-Setup-v1.9.5.exe` |
+| 当前安装包 | `CodexDreamSkinYuuka-Setup-v1.9.6.exe` |
 
 检查更新仅查询本仓库，不会回退到上游更新源。安装器不注册 `dreamskin://`，可用管理器导入本地 ZIP。原版和优香版可以保留各自安装文件，但同一 Codex 同时只使用一个主题引擎；操作锁和自动接管锁跨产品共享。
 

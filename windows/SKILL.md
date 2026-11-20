@@ -3,7 +3,7 @@ name: codex-dream-skin-yuuka
 description: Apply, launch, verify, repair, update, migrate, or restore the independent Yuuka and Blue Archive theme for Windows Codex Desktop. Use for this fork's animated home, quiet task pages, theme library, local daily plan, and official-shortcut takeover. Keep official WindowsApps and app.asar unchanged.
 ---
 
-# Codex Dream Skin Yuuka · Windows v1.9.5
+# Codex Dream Skin Yuuka · Windows v1.9.6
 
 Apply a reversible renderer skin through Chromium DevTools Protocol while launching the official Store-installed Codex executable. Never replace or take ownership of files under `WindowsApps`. This is the Windows-first Yuuka fork; installation and update assets come only from `longly-boat/Codex-Dream-Skin-Yuuka`. Preserve upstream credits and software licensing.
 

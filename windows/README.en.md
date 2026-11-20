@@ -1,4 +1,4 @@
-# Codex Dream Skin Yuuka for Windows · v1.9.5
+# Codex Dream Skin Yuuka for Windows · v1.9.6
 
 [中文](README.md) · [English](README.en.md)
 
@@ -13,7 +13,7 @@ The first independent Windows Yuuka release brings a Blue Archive-inspired home 
 
 ## Release installation
 
-Download `CodexDreamSkinYuuka-Setup-v1.9.5.exe` and `SHA256SUMS.txt` from [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest), verify the checksum, and run the installer. Installation is per user. See the [Windows installation guide](../docs/install-windows.en.md) for first launch, SmartScreen prompts, updates, and removal.
+Download `CodexDreamSkinYuuka-Setup-v1.9.6.exe` and `SHA256SUMS.txt` from [Releases](https://github.com/longly-boat/Codex-Dream-Skin-Yuuka/releases/latest), verify the checksum, and run the installer. Installation is per user. See the [Windows installation guide](../docs/install-windows.en.md) for first launch, SmartScreen prompts, updates, and removal.
 
 Open **Codex Dream Skin Yuuka** to enter the native theme manager. Right-click the tray icon to apply a theme, switch saved themes, or restore the appearance. Double-clicking the icon also opens the manager.
 
