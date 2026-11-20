@@ -52,6 +52,15 @@ html[data-dream-skin="active"] :is(#root, [data-app-shell-frame], [data-app-shel
   background-color: transparent !important;
   background-image: none !important;
 }
+/* Codex 26.1117 paints a separate backing behind main and its header. Keep
+   its native geometry/edge effects; only Home lets the wallpaper through. */
+html[data-dream-skin="active"] [data-app-shell-frame="true"] [data-app-shell-workspace="true"] > [data-app-shell-surface-backing="true"] {
+  background-color: var(--ds-bg) !important;
+  background-image: none !important;
+}
+html[data-dream-skin="active"][data-dream-page="home"] [data-app-shell-frame="true"] [data-app-shell-workspace="true"] > [data-app-shell-surface-backing="true"] {
+  background-color: transparent !important;
+}
 html[data-dream-skin="active"] [data-ds-part="main"] {
   color: var(--ds-text) !important;
   background: var(--ds-bg) !important;
